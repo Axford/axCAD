@@ -35,6 +35,10 @@
 		});
 	
 		console.log("3");
+		
+		repo.getTree('master', function(err, tree) {
+			console.log(tree);
+		});
 	
 	});
 	

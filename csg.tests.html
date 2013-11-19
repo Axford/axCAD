@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+  
+	<script src="https://rawgithub.com/jashkenas/underscore/master/underscore-min.js" type="text/javascript"></script>
+	<script src="http://codeorigin.jquery.com/jquery-2.0.3.min.js" type="text/javascript"></script>
+	
+
+<script>
+	function log(txt) {
+		$('#log').append('<br/>' + txt);
+	}
+	
+	function httpGet(theUrl)
+	{
+		var xmlHttp = null;
+
+		xmlHttp = new XMLHttpRequest();
+		xmlHttp.open( "GET", theUrl, false );
+		xmlHttp.send( null );
+		return xmlHttp.responseText;
+	}
+	
+	function send(w,cmd,msg) {
+		w.postMessage({'cmd':cmd,'msg':msg});
+	}
+
+	$(function() {
+		var scr = $('#jscad').html();
+		
+		var blob = new Blob([scr], {type: 'text/javascript'});
+		
+		var worker = new Worker(URL.createObjectURL(blob));
+		
+		worker.onmessage = function (e) {
+			if (e.data.cmd) {
+  				log('cmd:' + e.data.cmd + ', msg:'+e.data.msg);
+  				
+  				switch(e.data.cmd) {
+  					case 'import':
+  						// go get the requested file
+  						var txt = httpGet(e.data.msg);
+  					
+  						// post it back
+  						send(worker,'imported',txt);
+  						break;
+  						
+  					case 'importComplete':
+  						send(worker,'main','');
+  						break;
+  				}
+  				
+  			} else
+  				log(e.data);
+		};
+		
+		worker.postMessage();	
+		
+		//worker.terminate();
+	
+	});
+	
+	
+
+
+</script>
+</head>
+
+<body>
+  
+  
+  
+  <div id="log"/>
+  
+<div id="jscad" style="display:none">
+
+var i=7;
+
+function send(cmd,msg) {
+	postMessage({'cmd':cmd,'msg':msg});
+}
+
+function importScript(scr) {
+	send('import',scr);
+}
+
+importScript('js/csg.js');
+
+//importScripts('http://localhost:8888/repos/axCAD/js/csg.js');
+
+function main() {
+  var cube = CSG.roundedCube({radius: 10, roundradius: 2, resolution: 16});
+  var sphere = CSG.sphere({radius: 10, resolution: 16}).translate([5, 5, 5]);
+  return cube.union(sphere);
+}
+
+self.onmessage = function(e) {
+  var data = e.data;
+  
+  if (data)
+  	if (data.cmd) {
+	 	switch (data.cmd) {
+		case 'start':
+		  send('log','started');
+		  break;
+		  
+		case 'stop':
+		  send('log','stopped');
+		  self.close(); 
+		  break;
+		
+		case 'imported':
+			send('log','Import received, compiling...');
+			eval(data.msg);
+			send('importComplete','');
+			break;
+		
+		case 'main':
+			send('csg',main());
+			break;
+		
+		default:
+		  send('log','Unknown command:' + data.cmd + ', '+data.msg);
+	  }
+	  
+	}
+}
+
+</div>
+
+
+</body>
+</html>
