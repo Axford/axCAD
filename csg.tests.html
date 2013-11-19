@@ -7,6 +7,7 @@
 	<script src="https://rawgithub.com/jashkenas/underscore/master/underscore-min.js" type="text/javascript"></script>
 	<script src="http://codeorigin.jquery.com/jquery-2.0.3.min.js" type="text/javascript"></script>
 	
+	<script src="js/csg.js" ></script>
 
 <script>
 	function log(txt) {
@@ -32,6 +33,7 @@
 		
 		var blob = new Blob([scr], {type: 'text/javascript'});
 		
+		
 		var worker = new Worker(URL.createObjectURL(blob));
 		
 		worker.onmessage = function (e) {
@@ -50,6 +52,9 @@
   					case 'importComplete':
   						send(worker,'main','');
   						break;
+  						
+  					case 'csg':
+  						log(CSG.fromObject(e.data.msg).toStlString());
   				}
   				
   			} else
