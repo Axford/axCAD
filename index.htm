@@ -1,0 +1,53 @@
+
+<html>
+<head>
+
+	<script src="https://rawgithub.com/jashkenas/underscore/master/underscore-min.js" type="text/javascript"></script>
+	<script src="http://codeorigin.jquery.com/jquery-2.0.3.min.js" type="text/javascript"></script>
+	<script src="js/github.js" type="text/javascript"></script>
+	
+	<script type="text/javascript">
+	
+	$(function() {
+	
+		var github = new Github({
+			token: "dca8a5ceabe3b3a67a355375c4d3fae1cdac25ec"
+		});
+		
+		console.log("4");
+	
+		var user = github.getUser();
+	
+		console.log(user);	
+		
+		user.repos(function(err, repos) {
+			console.log("user.repos:", repos);
+		});
+	
+		console.log("1");
+	
+		var repo = github.getRepo("Axford", "axCut");
+	
+		console.log("2");
+	
+		repo.show(function(err, repo) {
+			console.log("repos.show: ",repo);		
+		});
+	
+		console.log("3");
+	
+	});
+	
+	</script>
+	
+</head>
+
+
+<body>
+
+
+<div id="log"/>
+
+
+</body>
+</html>
