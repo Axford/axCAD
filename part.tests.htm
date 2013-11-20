@@ -12,6 +12,8 @@
 	<script src="js/three.min.js"></script>
 	
 	<script src="js/ThreeCSG.js"></script>
+	
+	<script src="js/arboreal.js"></script>
 
 	<script src="js/axCAD.js" ></script>
 
@@ -66,8 +68,13 @@
 	var screw;
 	var camera, scene, renderer;
    	var geometry, material, mesh;
+   	var project;
 
 	$(function() {
+	
+		project = new Project();
+		project.loadFromURL('testProject.json');
+	
 		//var txt = httpGet('example2.jscad');
 		var spec = {};
 		spec.l = {};
@@ -79,7 +86,7 @@
 		screw.visualiseWithGL();
 		
    	 	init();
-    	animate();
+    	//animate();
 	
 	});
 	
@@ -100,6 +107,8 @@
 		document.body.appendChild( renderer.domElement );
 		
 		ScaleInView(mesh);
+		
+		renderer.render( scene, camera );
 	}
 
 	function animate() {

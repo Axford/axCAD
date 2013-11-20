@@ -1,0 +1,13 @@
+{
+	"resources": [
+		{"name": "example1.jscad"},
+		{"name":"js",
+		 "resources":[
+		 	{"name":"csg.js"},
+		 	{"name":"arboreal.js"},
+		 	{"name":"axCAD.js"}
+		 ]
+		}
+	],
+	"include":["js/csg.js","js/arboreal.js","js/axCAD.js"]
+}

@@ -3,6 +3,10 @@
 
 // Requires:
 //   csg.js
+//   Three.js
+//   ThreeCSG.js
+//   arboreal.js
+
 
 //
 // Specification
@@ -163,6 +167,103 @@ GLVisualisation.prototype.compile = function() {
 	console.log('Compilation complete');
 	
 	return this.mesh;
+}
+
+
+//
+// Resource
+// --------
+// A resource within a project (e.g. a file)
+
+Resource = function(name) {
+	this.name = name;
+	
+	this.data = '';  // resource data stored as a string
+	
+	this.source = '';  // where did it come from?  e.g. url
+	
+	this.project = undefined;
+	
+	// extend to support filesystem linkage, e.g. github, dropbox
+}
+
+Resource.prototype = {};
+
+Resource.prototype.loadFromURL = function(url) {
+	this.source = url;
+	
+	console.log('Loading resource: ',url);
+	
+	var xmlHttp = null;
+	xmlHttp = new XMLHttpRequest();
+	xmlHttp.open( "GET", url, false );
+	xmlHttp.send( null );
+	
+	this.data = xmlHttp.responseText;
+}
+
+
+//
+// Project
+// -------
+// A working collection of part, assemblies, scripts, etc
+
+Project = function() {
+	
+	this.settings = {};
+	
+	this.resources = new Arboreal();
+	
+	this.loadDefaultSettings();
+}
+
+Project.prototype = {};
+
+Project.prototype.loadDefaultSettings = function() {
+	// clear current settings
+	this.settings = {};
+	
+}
+
+
+Project.prototype.loadFromURL = function(url) {
+
+	console.log('Loading project: ',url);
+
+	var xmlHttp = null;
+	xmlHttp = new XMLHttpRequest();
+	xmlHttp.open( "GET", url, false );
+	xmlHttp.send( null );
+	
+	// expect in JSON format
+	this.settings = JSON.parse(xmlHttp.responseText);
+	this.settings.source = url;
+	
+	// go load any resources for the project
+	this.loadResources();
+}
+
+Project.prototype.loadResources = function() {
+	
+	function parseAndLoad(parentNode,path,res) {
+		// iterate over res contents
+		for (r in res) {
+			
+			var rtemp = new Resource(res[r].name);
+			
+			var node = parentNode.appendChild(rtemp);
+			
+			if (res[r].resources) {
+				parseAndLoad(node, path + rtemp.name + '/', res[r].resources);
+			} else {
+				rtemp.loadFromURL(path + rtemp.name);
+			}
+				
+		} 
+	}
+	
+	parseAndLoad(this.resources, '', this.settings.resources);
+
 }
 
 
