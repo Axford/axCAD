@@ -9,6 +9,8 @@
 	
 	<script src="js/csg.js" ></script>
 
+	<script src="js/axCAD.js" ></script>
+
 <script>
 	function log(txt) {
 		$('#log').append('<br/>' + txt);
@@ -82,13 +84,29 @@
 <div id="jscad" style="display:none">
 
 var i=7;
+var waitFor = '';
+var waitOver = true;
+var scrData = '';
 
 function send(cmd,msg) {
 	postMessage({'cmd':cmd,'msg':msg});
 }
 
 function importScript(scr) {
+	waitFor = 'importComplete';
+	waitOver = false;
 	send('import',scr);
+	
+	setInterval(function() {
+		if (waitOver) { clearInterval();}
+	}, 1);
+	
+	send('log','waitOver');
+	
+	send('log','Import received, compiling...');
+	eval(scrData);
+	send('log',scrData);
+	send('importComplete','');
 }
 
 importScript('js/csg.js');
@@ -117,9 +135,7 @@ self.onmessage = function(e) {
 		  break;
 		
 		case 'imported':
-			send('log','Import received, compiling...');
-			eval(data.msg);
-			send('importComplete','');
+			scrData = data.msg;
 			break;
 		
 		case 'main':
@@ -128,6 +144,11 @@ self.onmessage = function(e) {
 		
 		default:
 		  send('log','Unknown command:' + data.cmd + ', '+data.msg);
+	  }
+	  
+	  if (data.cmd == waitFor) { 
+	  	 //waitOver = true;
+	  	 send('log','waitOver detected');
 	  }
 	  
 	}

@@ -20,21 +20,39 @@ Screw.specification.addParam({name:'r',
 							units:'mm',
 							dataType:Number,
 							visible:true,
-							default:4
+							default:4,
+							isKey:true,
+							min:0.1,
+							max:1000
 						   });
 // compact form, using alias for specification and short-hand parameter definition
-Screw.spec.add('l','length','mm',Number,true,8);
+Screw.spec.add('l','length','mm',Number,true,8,true,0.1,1000);
 
-// define catalogue source(s), source refers to a resource in the project
-// if referenced as a part catalogue, the host will automatically match up
+// define catalog source(s), source refers to a resource in the project
+// if referenced as a part catalog, the host will automatically match up
 // the resource file to the part specification, etc and provide a friendly editor
 // for the specification data
-// the load function performs a lazy load, actually executed by the host
-Screw.catalogue.load({src:'Screws.csv',autoCreate:true, includeExample:true});
+// the load function queues a lazy load, later executed by the host
+Screw.catalog.load({src:'Screws.csv',autoCreate:true, includeExample:true});
 
-// the catalogue can also be programmatically populated, specified values will
+// the catalog can also be programmatically populated, specified values will
 // be merged with defaults from the specification
-Screw.catalogue.add({r:5, l:20});
+Screw.catalog.add({r:5, l:20});
+
+// Gather
+// ------
+// Get any parts/assemblies to be integrated with the new part
+// gather any process information required
+Screw.prototype.gather = function(spec) {
+	// ensure the results are assigned to local variables
+	// e.g. this.subPart = getPart('PoziDriveHead');
+	
+	// fetch manufacturing process information from the host
+	// a process defines a set of specification info, e.g. tolerances
+	// a process catalog stores specific values, much like for parts
+	this.process = getProcess('3DPrint');
+}
+
 
 
 // Make
@@ -47,10 +65,6 @@ Screw.prototype.make = function(spec) {
 	// common parameters are automatically extracted, e.g. material
 	var part = new Part(spec);
 	
-	// fetch manufacturing process information from the host
-	// a process is a set of specification info, e.g. tolerances
-	var process = getProcess('3DPrint');
-
 	// do some CSG stuff to make a screw based on the spec
 	var cube = CSG.roundedCube({radius: 10, roundradius: 2, resolution: 16});
   	var sphere = CSG.sphere({radius: 10, resolution: 16}).translate([5, 5, 5]);
@@ -112,28 +126,30 @@ ScrewAndWasher.parts = ['Screw','Washer'];
 // the prototype also includes common values such as supplier, labour cost, labour time
 // the specification can be extended in the same was a part specification
 
-// A catalogue can also be defined in the same way as for parts
-ScrewAndWasher.catalogue.load({src:'ScrewsAndWashers.csv',autoCreate:false, includeExample:false});
-ScrewAndWasher.catalogue.add({'ScrewName':'M4CapScrew', 'WasherName':'M4PennyWasher'});
+// A catalog can also be defined in the same way as for parts
+ScrewAndWasher.catalog.load({src:'ScrewsAndWashers.csv',autoCreate:false, includeExample:false});
+ScrewAndWasher.catalog.add({'ScrewName':'M4CapScrew', 'WasherName':'M4PennyWasher'});
 
+
+// get the parts
+ScrewAndWasher.prototype.gather = function(spec) {
+	this.screw = getPart(spec.ScrewName);
+	this.washer = getPart(spec.WasherName);
+}
 
 // make the assembly
-ScrewAndWasher.make = function(spec) {
+ScrewAndWasher.prototype.make = function(spec) {
 
 	var a = new Assembly();
-
-	// go get some parts
-	var screw = getPart(spec.ScrewName);
-	var washer = getPart(spec.WasherName);
 	
 	// can get sub-assemblies in a similar way
 	// var b = getAssembly('SubAssembly1');
 	
 	// connect them, connect(partToConnect, self.connector, partToConnect.connector) 
-	a.add(washer).connect(screw,'top','base');
+	a.add(washer).connect(this.screw,'top','base');
 
 	// define connectors for the assembly, in this case copying from one of the parts
-	a.connectors.add(washer.connector('bottom'));
+	a.connectors.add(this.washer.connector('bottom'));
 	
 	
 	// dimensions can be defined in same manner as for parts
@@ -151,3 +167,28 @@ function assemblyLines() {
 	return [ScrewAndWasher];
 }
 
+
+
+// Processes
+
+3DPrint = new Process('3DPrint);
+3DPrint.description = 'Defines common specification parameters for 3D printing';
+
+3DPrint.specification.addParam({name:'nozzle',
+							description:'nozzle radius',
+							units:'mm',
+							dataType:Number,
+							visible:true,
+							default:0.25
+						   });
+3DPrint.spec.add('layerHeight','layer height','mm',Number,true,0.3);
+
+3DPrint.catalog.load({src:'3DPrintSettings.csv',autoCreate:true, includeExample:true});
+
+
+
+// entry point for host to query processes contained in this file
+
+function processes() {
+	return [3DPrint];
+}

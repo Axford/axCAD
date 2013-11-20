@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+  
+	<script src="https://rawgithub.com/jashkenas/underscore/master/underscore-min.js" type="text/javascript"></script>
+	<script src="http://codeorigin.jquery.com/jquery-2.0.3.min.js" type="text/javascript"></script>
+	
+	<script src="js/csg.js" ></script>
+
+	<script src="js/three.min.js"></script>
+	
+	<script src="js/ThreeCSG.js"></script>
+
+	<script src="js/axCAD.js" ></script>
+
+	<script src="example2.jscad"></script>
+	
+<script>
+	function log(txt) {
+		$('#log').append('<br/>' + txt);
+	}
+	
+	function httpGet(theUrl)
+	{
+		var xmlHttp = null;
+
+		xmlHttp = new XMLHttpRequest();
+		xmlHttp.open( "GET", theUrl, false );
+		xmlHttp.send( null );
+		return xmlHttp.responseText;
+	}
+	
+	function toCameraCoords(position) {
+		camera.updateMatrix();
+		camera.updateMatrixWorld();
+		camera.matrixWorldInverse.getInverse(camera.matrixWorld);
+		
+		return position.clone().applyMatrix4(camera.matrixWorldInverse); 
+	}
+	
+	function ScaleInView(mesh) {
+	  var tmp_fov = 0.0;
+	  
+	  mesh.geometry.computeBoundingBox();
+
+	  for (var i=0; i<2; i++) {
+	  	if (i==0) {
+			proj2d = toCameraCoords(mesh.geometry.boundingBox.min);
+		} else {
+			proj2d = toCameraCoords(mesh.geometry.boundingBox.max);
+		}
+
+		angle = 114.59 * Math.max( // 2 * (Pi / 180)
+		  Math.abs(Math.atan(proj2d.x/proj2d.z) / camera.aspect),
+		  Math.abs(Math.atan(proj2d.y/proj2d.z))
+		);
+		tmp_fov = Math.max(tmp_fov, angle);
+	 }
+
+	 camera.fov = tmp_fov + 5; // An extra 5 degrees keeps all lines visible
+	 camera.updateProjectionMatrix();
+	}
+	
+	var screw;
+	var camera, scene, renderer;
+   	var geometry, material, mesh;
+
+	$(function() {
+		//var txt = httpGet('example2.jscad');
+		var spec = {};
+		spec.l = {};
+		spec.l.value = 4;
+		spec.r = {};
+		spec.r.value = 4;
+		
+		screw = Screw.make(spec);
+		
+		
+		screw.visualisations.push(new GLVisualisation(screw));
+		
+		
+   	 	init();
+    	animate();
+	
+	});
+	
+	function init() {
+		console.log('here');
+		camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+		camera.position.z = 1000;
+
+		scene = new THREE.Scene();
+
+		geometry = new THREE.CubeGeometry( 200, 200, 200 );
+		material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
+
+		mesh = screw.visualisations[0].mesh;
+		
+		
+		scene.add( mesh );
+
+		renderer = new THREE.CanvasRenderer();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+
+		document.body.appendChild( renderer.domElement );
+		
+		ScaleInView(mesh);
+	}
+
+	function animate() {
+
+		// note: three.js includes requestAnimationFrame shim
+		requestAnimationFrame( animate );
+
+		if (mesh) {
+			mesh.rotation.x += 0.01;
+			mesh.rotation.y += 0.02;
+		}
+
+		renderer.render( scene, camera );
+
+    }
+	
+	
+
+
+</script>
+</head>
+
+<body>
+  
+  
+  
+  <div id="log"/>
+  
+
+
+</body>
+</html>
