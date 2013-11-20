@@ -2105,7 +2105,18 @@ CSG.Vector3D = function(x, y, z) {
 					} else {
 						this._z = 0;
 					}
-				} else ok = false;
+				} else if (('_x' in x) && ('_y' in x)) {
+					this._x = parseFloat(x._x);
+					this._y = parseFloat(x._y);
+					if('_z' in x) {
+						this._z = parseFloat(x._z);
+					} else {
+						this._z = 0;
+					}
+				
+				} else {
+					ok = false;
+				}
 			} else {
 				var v = parseFloat(x);
 				this._x = v;
