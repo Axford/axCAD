@@ -76,10 +76,7 @@
 		spec.r.value = 4;
 		
 		screw = Screw.make(spec);
-		
-		
-		screw.visualisations.push(new GLVisualisation(screw));
-		
+		screw.visualiseWithGL();
 		
    	 	init();
     	animate();
@@ -87,14 +84,10 @@
 	});
 	
 	function init() {
-		console.log('here');
 		camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
 		camera.position.z = 1000;
 
 		scene = new THREE.Scene();
-
-		geometry = new THREE.CubeGeometry( 200, 200, 200 );
-		material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
 
 		mesh = screw.visualisations[0].mesh;
 		

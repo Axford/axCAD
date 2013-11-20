@@ -134,6 +134,10 @@ Part.prototype.fromCSG = function(csg) {
 	this.csg = csg;
 }
 
+Part.prototype.visualiseWithGL = function() {
+	this.visualisations.push(new GLVisualisation(this));
+}
+
 
 
 
@@ -154,7 +158,7 @@ GLVisualisation.prototype.compile = function() {
 	
 	var geom =  THREE.CSG.fromCSG( csg );
 	
-	this.mesh = new THREE.Mesh(geom, new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } ));
+	this.mesh = new THREE.Mesh(geom, new THREE.MeshNormalMaterial( { color: 0xff0000, wireframe: false } ));
 	
 	console.log('Compilation complete');
 	

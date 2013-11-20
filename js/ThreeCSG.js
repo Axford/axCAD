@@ -67,8 +67,6 @@ THREE.CSG = {
 			three_geometry = new THREE.Geometry( ),
 			polygons = csg_model.toPolygons( );
 		
-		//console.log(polygons);
-		
 		if ( !CSG ) {
 			throw 'CSG library not loaded. Please get a copy from https://github.com/evanw/csg.js';
 		}
@@ -87,7 +85,7 @@ THREE.CSG = {
 			for (var j = 2; j < vertices.length; j++) {
 				face = new THREE.Face3( vertices[0], vertices[j-1], vertices[j], new THREE.Vector3( ).copy( polygons[i].plane.normal ) );
 				three_geometry.faces.push( face );
-				three_geometry.faceVertexUvs[0].push( new THREE.UV( ) );
+				three_geometry.faceVertexUvs[0].push( new THREE.Vector2( ) );
 			}
 		}
 		
