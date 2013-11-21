@@ -151,7 +151,15 @@ function updateResourceTree() {
 		
 		if (typeof node.data.name != 'undefined') {
 			n = $('<li><div>'+node.data.name+'</div></li>');
+			n.data({resourceID: node.id});
 			node.data.domElement = n;
+			
+			// bind event handlers
+			n.click(function(e) {
+				e.stopPropagation();
+				editFile(this);
+			});
+			
 			parentDomNode.append(n);
 		}
 		
@@ -169,4 +177,17 @@ function updateResourceTree() {
 	}
 	
 	outputNode(project.resources, $('#resourceTree'));
+}
+
+function editFile(node) {
+	var resID = $(node).data().resourceID;
+	var resource = project.resources.find(resID);
+	
+	// save changes ?
+	
+	editor.setValue(resource.data.data, -1);
+	editor.getSession().setMode("ace/mode/javascript");
+	editor.resourceID = resID;	
+	
+	$('#resourceName').val(resource.data.name);
 }

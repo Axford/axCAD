@@ -1,6 +1,6 @@
 {
 	"resources": [
-		{"name": "example1.jscad"},
+		{"name": "example2.jscad"},
 		{"name":"js",
 		 "resources":[
 		 	{"name":"csg.js"},

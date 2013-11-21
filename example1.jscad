@@ -1,4 +1,4 @@
-importScripts('js/csg.js);
+importScripts('js/csg.js');
 
 function main() {
   var cube = CSG.roundedCube({radius: 10, roundradius: 2, resolution: 16});

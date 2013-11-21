@@ -42,16 +42,13 @@
 	}
 
 	$(function() {
-	
-		$('#editor').html(httpGet('example2.jscad'));
-	
 		
 		project = new Project();
 		
 		initUI();
 		
 		project.loadFromURL('testProject.json');
-	
+		
 		updateResourceTree();
 	
 		// test something
@@ -93,7 +90,7 @@
 <div id="panel" class="ui-layout-center">
 	<div id="editorPanel" class="ui-layout-west">
 		<div id="editorRibbon">
-			<input type="text" name="resourceName">
+			<input type="text" id="resourceName">
 			
 			<div id="saveButton" class="button">Save</div>
 			<div id="compileButton" class="button keyButton">Compile</div>
