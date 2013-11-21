@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+  
+	<script src="https://rawgithub.com/jashkenas/underscore/master/underscore-min.js" type="text/javascript"></script>
+	<link href="css/ui-lightness/jquery-ui-1.10.3.custom.css" rel="stylesheet">
+	<script src="js/jquery-1.9.1.js"></script>
+	<script src="js/jquery-ui-1.10.3.custom.js"></script>	
+	<script src="js/jquery.layout-latest.min.js" type="text/javascript"></script>
+	<script src="js/ace/ace.js" type="text/javascript"></script>
+
+	<script src="js/axCADui.js" type="text/javascript"></script>
+	<link type="text/css" rel="stylesheet" href="css/axcut.css" />
+	
+	<script src="js/three.min.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="js/Stats.js"></script>
+	
+	<script src="js/csg.js" ></script>
+	<script src="js/ThreeCSG.js"></script>
+	<script src="js/arboreal.js"></script>
+	<script src="js/axCAD.js" ></script>
+
+	<script src="example2.jscad"></script>
+	
+	
+<script>
+	function log(txt) {
+		$('#log').append('<br/>' + txt);
+	}
+	
+	function httpGet(theUrl)
+	{
+		var xmlHttp = null;
+
+		xmlHttp = new XMLHttpRequest();
+		xmlHttp.open( "GET", theUrl, false );
+		xmlHttp.send( null );
+		return xmlHttp.responseText;
+	}
+
+	$(function() {
+	
+		$('#editor').html(httpGet('example2.jscad'));
+	
+		
+		project = new Project();
+		
+		initUI();
+		
+		project.loadFromURL('testProject.json');
+	
+		updateResourceTree();
+	
+		// test something
+		var screw;
+		var spec = {};
+		spec.l = {};
+		spec.l.value = 4;
+		spec.r = {};
+		spec.r.value = 4;
+		
+		screw = Screw.make(spec);
+		screw.visualiseWithGL();
+		
+		mesh = screw.visualisations[0].mesh;
+		mesh.geometry.computeBoundingBox();
+		
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		
+		scene.add(mesh);
+	});
+
+</script>
+
+<link type="text/css" rel="stylesheet" href="css/axcut.css" />
+
+
+</head>
+
+<body>
+  
+<div id="leftPanel" class="ui-layout-west">
+	
+	<div id="resourceTree">
+	
+	</div>
+</div>
+  
+<div id="panel" class="ui-layout-center">
+	<div id="editorPanel" class="ui-layout-west">
+		<div id="editorRibbon">
+			<input type="text" name="resourceName">
+			
+			<div id="saveButton" class="button">Save</div>
+			<div id="compileButton" class="button keyButton">Compile</div>
+		
+			
+			<div class="clear"></div>
+		</div>
+		
+		<pre id="editor"></pre>
+	</div>
+	<div id="gl" class="ui-layout-center""></div>
+</div>
+
+<div class="ui-layout-south">
+	<div id="log">
+	</div>
+</div>
+
+</body>
+</html>
