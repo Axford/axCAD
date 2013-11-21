@@ -161,8 +161,14 @@ GLVisualisation.prototype.compile = function() {
 	var csg = this.part.csg;
 	
 	var geom =  THREE.CSG.fromCSG( csg );
+	geom.computeFaceNormals();
 	
-	this.mesh = new THREE.Mesh(geom, new THREE.MeshNormalMaterial( { color: 0xff0000, wireframe: false } ));
+	this.mesh = new THREE.Mesh(geom, new THREE.MeshLambertMaterial(
+    {
+      color: 0xc0c0c0
+    }));
+	
+	
 	
 	console.log('Compilation complete');
 	
