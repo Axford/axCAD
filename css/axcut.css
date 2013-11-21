@@ -23,12 +23,12 @@ body {
 		
 	}
 	
-	#editorRibbon {
+	.ribbon {
 		padding: 0 6px;
 		padding-bottom: 6px;
 	}
 	
-	#editorRibbon input {
+	input {
 		border:1px solid #f0f0f0;
 		border-radius: 4px;
 		font-size: 16px;
@@ -39,24 +39,35 @@ body {
 		margin-top: 6px;
 	}
 	
-	#editorRibbon .button {
+	.button {
 		float:left;
 		margin:0;
 		padding: 6px 11px;
 		border:1px solid rgba(0,0,0,0.05);
 		border-radius: 4px;
 		font-size: 14px;
-		background-color: rgb(241,241,241);
-		color:black;
+		background-color: rgba(0,0,0,0.05);
+		color:rgba(0,0,0,0.5);
 		margin-left: 6px;
 		margin-top: 6px;
+		cursor:pointer;
 	}
 	
-	#editorRibbon .keyButton {
+	.button:hover {
+		color:black;
+		border:1px solid rgba(0,0,0,0.2);
+		box-shadow: 0px 0px 1px #aaa;
+		background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1));
+	}
+	
+	.keyButton {
 		background-color: rgb(209, 72, 54);
+		border:1px solid rgba(0,0,0,0.05);
 		color:white;
-		padding: 7px 12px;
-		border: none;
+	}
+	.keyButton:hover {
+		color:white;
+		background: linear-gradient(rgb(229,82,64), rgb(189,62,44));
 	}
 	
 	#panelContent {
