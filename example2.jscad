@@ -46,7 +46,7 @@ Screw.gather = function(spec) {
 	// fetch manufacturing process information from the host
 	// a process defines a set of specification info, e.g. tolerances
 	// a process catalog stores specific values, much like for parts
-	//this.process = getProcess('3DPrint');
+	this.process = getProcess('3DPrint');
 }
 
 
@@ -72,7 +72,7 @@ Screw.make = function(spec) {
 	part.connectors.add({name:'Base',pos:[0,0,0],dir:[0,0,-1]});
 	part.connectors.add({name:'Tip',pos:[0,0,-spec.l.value],dir:[0,0,-1]});
 	
-	invalid line...
+	
 	
 	// define dimensions
 	// can optionally be linked to a specification parameter
@@ -95,3 +95,10 @@ Screw.make = function(spec) {
 
 	return part;	
 } 	
+
+
+// entry point for host to query factories contained in this file
+function partFactories() {
+	// return an array of partFactory objects by name
+	return [Screw];
+}

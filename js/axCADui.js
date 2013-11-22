@@ -19,13 +19,13 @@ function initUI() {
 		}
 	});
 
-	editor = ace.edit("editor");
+	editor = ace.edit("sourceEditor");
 	editor.setTheme("ace/theme/axcad");
 	editor.getSession().setMode("ace/mode/javascript");
 	editor.getSession().setUseWrapMode(true);
 	editor.setFontSize('14px');
 	
-	$('#openButton').click(function() { openProject(); });
+	$('#projectOpenButton').click(function() { openProject(); });
 	
    	initGLViewer();
     animateGLViewer();
@@ -128,11 +128,21 @@ function resizeGL() {
 
 
 function resizeUI() {
-	$('#editor').height(
-		$('#editorPanel').height() - 
-		$('#editorRibbon').height() -
-		18
-	);
+	// do autoHeights
+	$('.autoHeight').each(function(index) {
+		// get parent height
+		var me = $(this);
+		var parentH = me.parent().height();
+		
+		// get height of any visible siblings before this in hierarchy
+		var sibH = 0;
+		me.prevAll(':visible').each(function(index2) {
+			sibH += $(this).outerHeight(true);
+		});
+		
+		// calc own height, minus own margins
+		me.height(parentH - sibH - me.outerHeight(true) + me.height());
+	});
 	
 	editor.resize();
 	resizeGL();
@@ -151,9 +161,17 @@ function updateResourceTree() {
 		var n = parentDomNode;
 		
 		if (typeof node.data.name != 'undefined') {
-			n = $('<li><div>'+node.data.name+'</div></li>');
+			n = $('<li/>');
+			d = $('<div/>');
+			d.html(node.data.name);
+			n.append(d);
 			n.data({resourceID: node.id});
 			node.data.domElement = n;
+			
+			// check resource type
+			if (node.data.isDir) d.addClass('directory');
+			if (node.data.ext == 'js') d.addClass('js');
+			if (node.data.ext == 'jscad') d.addClass('jscad');
 			
 			// bind event handlers
 			n.click(function(e) {
@@ -167,6 +185,32 @@ function updateResourceTree() {
 			node.data.onloaded = function(node) {
 				node.domElement.children('div').addClass('loaded');
 			};
+			node.data.oncompiling = function(node) {
+				node.domElement.children('div').removeClass('error');
+				node.domElement.children('div').removeClass('compiled');
+				node.domElement.children('div').addClass('compiling');
+			}
+			node.data.oncompiled = function(node) {
+				// check for errors
+				node.domElement.children('div').removeClass('compiling');
+				
+				if (node.compileError.msg) 
+					node.domElement.children('div').addClass('error')
+				else {
+					node.domElement.children('div').addClass('compiled');
+				}
+			}
+			node.data.onerror = function(node) {
+				if (node.compileError.msg) {
+					node.domElement.children('div').addClass('error');
+					node.domElement.children('div').removeClass('compiled');
+					
+					console.log('Error in '+node.name+': '+node.compileError.msg);
+				}
+			}
+			node.data.onchanged = function(node) {
+				updateResourceContents(node);
+			}
 			
 			parentDomNode.append(n);
 		}
@@ -185,6 +229,58 @@ function updateResourceTree() {
 	}
 	
 	outputNode(project.resources, $('#resourceTree'));
+	
+	// insert project node
+	var div = $('<div/>');
+	div.html(project.name);
+	div.addClass('project');
+	$('#resourceTree').prepend(div);
+}
+
+function updateResourceContents(node) {
+
+	// empty current contents
+	node.domElement.children('ul').remove();
+	
+	if (node.compileError.msg) {
+		
+	} else {
+		var ul = $('<ul/>');
+		node.domElement.append(ul);
+	
+		//partFactories
+		for (i=0;i<node.partFactories.length;i++) {
+			var pf = node.partFactories[i];
+			
+			var n = $('<li/>')
+			var d = $('<div/>');
+			d.addClass('partFactory');
+			d.html(pf.name);
+			d.data({partFactory:pf, resource:node});
+			d.click(function(e) {
+				e.stopPropagation();
+				viewPartFactory(this);
+			});
+			n.append(d);
+			ul.append(n);
+		}
+		
+		// assemblyLines
+		
+	
+	}
+}
+
+function viewPanel(p) {
+	
+	// hide other panels
+	$('.contextPanel').hide();
+	
+	// show requested panel
+	$('#'+p+'Panel').show();
+	
+	// ensure contents are sized correctly
+	resizeUI();
 }
 
 function editFile(node) {
@@ -197,15 +293,23 @@ function editFile(node) {
 			selectedResource.children('div').removeClass('selected');
 		}
 		
+		// switch panels
+		viewPanel('source');
+		
+		// mark selected not in resource list
 		selectedResource = $(node);
 	
 		selectedResource.children('div').addClass('selected');
 		
-		editor.setValue(resource.data.data, -1);
+		var lineNo = -1;
+		if (resource.data.compileError.lineNo) lineNo = resource.data.compileError.lineNo;
+		
+		editor.setValue(resource.data.data, lineNo - 5);
+		editor.gotoLine(lineNo);
 		editor.getSession().setMode("ace/mode/javascript");
 		editor.resourceID = resID;	
 		
-		$('#resourceName').val(resource.data.name);
+		$('#sourceResourceName').val(resource.data.name);
 		
 	} else {
 		// not yet loaded...
@@ -222,8 +326,93 @@ function openProject() {
 		
 		project.loadResources();
 		
-		// TEST
-		project.resources.children[0].data.compile();
-		editor.setValue(project.resources.children[0].data.combinedScript ,-1);
+		project.compileResources();
 	}
+}
+
+function viewPartFactory(node) {
+	// switch panels
+	viewPanel('partFactory');
+
+	// load content
+	var partFactory = $(node).data().partFactory;
+	var resource = $(node).data().resource;
+	
+	
+	$('#partFactoryName').html(partFactory.name + ' <span class="subtle">PartFactory</div>');
+
+	$('#partFactoryDesc').html(partFactory.description);
+	$('#partFactoryAuthor').html('Created by '+partFactory.author);
+	
+	// update button event handler
+	$('#partFactoryExampleButton').click(function(e) {
+		visualisePartFactoryExample(partFactory);
+	});
+	
+	// generate specification table
+	$('#partFactorySpec').empty();
+	
+	if (partFactory.specification.length > 0) {
+		var table = document.createElement('table');
+		
+		// build headings
+		var thr = document.createElement('tr');
+		for (key in partFactory.specification[0]) {
+			var th = document.createElement('th');
+			th.textContent = key;
+			thr.appendChild(th);
+		}
+		table.appendChild(thr);
+		
+		// populate rows
+		for (i=0; i < partFactory.specification.length; i++) {
+			var tr = document.createElement('tr');
+			
+			// iterate over headings
+			for (j=0; j<thr.children.length; j++) {
+				var td = document.createElement('td');
+				if (j==0)
+					$(td).addClass('bold');
+				td.textContent = partFactory.specification[i][thr.children[j].textContent];
+				tr.appendChild(td);
+			}
+			
+			table.appendChild(tr);
+		}
+		
+		$('#partFactorySpec').append(table);
+	}
+	
+	
+	// generate catalog table
+	$('#partFactoryCatalog').empty();
+	
+	
+	
+}
+
+
+function visualisePartFactoryExample(pf) {
+	
+	// generate a default specification
+	var spec = pf.getDefaultSpec();
+	
+	// go make a suitable part
+	pf.make(spec, function(part) {
+		// visualise it
+		console.log('Received part');
+		
+		part.visualiseWithGL();
+		
+		var mesh = part.visualisations[0].mesh;
+		mesh.geometry.computeBoundingBox();
+		
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		
+		scene.add(mesh);
+	});
+	
+	
+	
 }

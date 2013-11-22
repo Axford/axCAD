@@ -50,7 +50,7 @@
 	window.onerror = function(msg,url,lineno) {
 		console.log('window.onerror: ',msg,url,lineno);
 		// trap top level errors?
-		return true;
+		//return true;
 	}
 
 </script>
@@ -62,13 +62,9 @@
 
 <body>
   
-<div id="leftPanel" class="ui-layout-west">
+<div id="projectPanel" class="ui-layout-west">
 	
-	<div id="resourceRibbon" class="ribbon">
-		<div id="openButton" class="button">Open</div>
-		
-		<div class="clear"></div>
-	</div>
+	<div id="logo">axCAD</div>
 	
 	<div id="resourceTree">
 	
@@ -76,18 +72,58 @@
 </div>
   
 <div id="panel" class="ui-layout-center">
-	<div id="editorPanel" class="ui-layout-west">
-		<div id="editorRibbon" class="ribbon">
-			<input type="text" id="resourceName">
-			
-			<div id="saveButton" class="button">Save</div>
-			<div id="compileButton" class="button keyButton">Compile</div>
+	<div id="leftPanel" class="ui-layout-west">
 		
+		<div id="projectPanel" class="contextPanel autoHeight">
+			<div id="projectRibbon" class="ribbon">
+				<div id="projectOpenButton" class="button keyButton left">Open</div>
 			
-			<div class="clear"></div>
+				<div class="clear"></div>
+			</div>
+			
+			<div id="projectContent"></div>
+			
 		</div>
 		
-		<pre id="editor"></pre>
+		<div id="sourcePanel" class="contextPanel autoHeight" style="display:none">
+			<div id="sourceRibbon" class="ribbon">
+				<input type="text" id="sourceResourceName" class="left">
+				
+				<div id="sourceSaveButton" class="button left">Save</div>
+				<div id="sourceCompileButton" class="button keyButton left">Compile</div>
+			
+				
+				<div class="clear"></div>
+			</div>
+			
+			<pre id="sourceEditor" class="autoHeight"></pre>
+		</div>
+	
+		<div id="partFactoryPanel" class="contextPanel autoHeight" style="display:none">
+			<div id="partFactoryRibbon" class="ribbon">
+				<h1 id="partFactoryName" class="heading"></h1>
+				
+				<div id="partFactoryExampleButton" class="button keyButton right">View Example</div>
+				
+				<div class="clear"></div>
+			</div>
+			
+			<div id="partFactoryContent" class="autoHeight">
+				<div id="partFactoryDesc" class=""></div>
+				<div id="partFactoryAuthor" class=""></div>
+				
+				<h2>Specification</h2>
+				<div id="partFactorySpec" class=""></div>
+			
+				<h2>Catalog</h2>
+				<div id="partFactoryCatalog" class=""></div>
+				
+				
+			</div>
+			
+		</div>
+		
+		
 	</div>
 	<div id="gl" class="ui-layout-center""></div>
 </div>

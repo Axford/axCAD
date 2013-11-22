@@ -1,4 +1,5 @@
 {
+	"name": "Test Project",
 	"resources": [
 		{"name": "example2.jscad"},
 		{"name":"js",
