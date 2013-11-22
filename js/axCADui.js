@@ -6,6 +6,7 @@ var camera, scene, renderer, light;
 var geometry, material;
 var project;
 var stats;
+var selectedResource;
 	
 function initUI() {
 	bodyLayout = $('body').layout();
@@ -14,8 +15,6 @@ function initUI() {
 		west__size: '50%',
 		spacing_open: 20,
 		onresize: function(Instance, state, options, name) {
-			log('resize triggered', name);
-			
 			resizeUI();
 		}
 	});
@@ -25,6 +24,8 @@ function initUI() {
 	editor.getSession().setMode("ace/mode/javascript");
 	editor.getSession().setUseWrapMode(true);
 	editor.setFontSize('14px');
+	
+	$('#openButton').click(function() { openProject(); });
 	
    	initGLViewer();
     animateGLViewer();
@@ -160,6 +161,13 @@ function updateResourceTree() {
 				editFile(this);
 			});
 			
+			node.data.onloading = function(node) {
+				// loading icon?
+			};
+			node.data.onloaded = function(node) {
+				node.domElement.children('div').addClass('loaded');
+			};
+			
 			parentDomNode.append(n);
 		}
 		
@@ -183,11 +191,39 @@ function editFile(node) {
 	var resID = $(node).data().resourceID;
 	var resource = project.resources.find(resID);
 	
-	// save changes ?
+	if (resource.data.loaded && !resource.data.isDir) {
+		// save changes to previous file?
+		if (selectedResource) {
+			selectedResource.children('div').removeClass('selected');
+		}
+		
+		selectedResource = $(node);
 	
-	editor.setValue(resource.data.data, -1);
-	editor.getSession().setMode("ace/mode/javascript");
-	editor.resourceID = resID;	
-	
-	$('#resourceName').val(resource.data.name);
+		selectedResource.children('div').addClass('selected');
+		
+		editor.setValue(resource.data.data, -1);
+		editor.getSession().setMode("ace/mode/javascript");
+		editor.resourceID = resID;	
+		
+		$('#resourceName').val(resource.data.name);
+		
+	} else {
+		// not yet loaded...
+	}
+}
+
+function openProject() {
+	var path=prompt("Project path","testProject.json");
+		
+	if (path != null) {
+		project.loadFromURL('testProject.json');
+		
+		updateResourceTree();
+		
+		project.loadResources();
+		
+		// TEST
+		project.resources.children[0].data.compile();
+		editor.setValue(project.resources.children[0].data.combinedScript ,-1);
+	}
 }

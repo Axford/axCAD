@@ -80,7 +80,7 @@ body {
 		margin-top: 6px;
 		width:100%;
 		
-		// actual height to be set by javascript
+		/* actual height to be set by javascript */
     }
 	
 	#gl {
@@ -371,9 +371,22 @@ iframe.ui-layout-mask {}	/* extra mask for objects/applets */
 #resourceTree li div {
 	margin:0;
 	padding: 2px 6px;
+	color:#c0c0c0; 
+}
+
+#resourceTree li div.loaded {
+	color:black;
+}
+
+#resourceTree li div.selected {
+	background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0.5));
+	padding-left:3px;
+	padding-top: 6px;
+	padding-bottom:6px;
+	color: black;
 }
 
 #resourceTree li div:hover  {
-	background-color: rgb(209, 72, 54);
+	background: rgba(209, 72, 54,1);
 	color: white;
 }

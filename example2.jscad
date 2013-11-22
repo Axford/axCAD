@@ -72,6 +72,7 @@ Screw.make = function(spec) {
 	part.connectors.add({name:'Base',pos:[0,0,0],dir:[0,0,-1]});
 	part.connectors.add({name:'Tip',pos:[0,0,-spec.l.value],dir:[0,0,-1]});
 	
+	invalid line...
 	
 	// define dimensions
 	// can optionally be linked to a specification parameter

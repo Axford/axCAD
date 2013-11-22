@@ -181,10 +181,32 @@ GLVisualisation.prototype.compile = function() {
 // --------
 // A resource within a project (e.g. a file)
 
-Resource = function(name) {
+Resource = function(name, isDir, path) {
 	this.name = name;
+	this.isDir = isDir;
+	this.path = path;
+	this.loaded = false;
+	
+	this.onloading = null;
+	this.onloaded = null;
+	this.oncompiling = null;
+	this.oncompiled = null;
+	
+	this.compileerror = {};
 	
 	this.data = '';  // resource data stored as a string
+	
+	this.blob = null;
+	this.worker = null;
+	
+	// extract file extension
+	var nameParts = name.split('.');
+	
+	if (nameParts.length>1) {
+		this.ext = nameParts[nameParts.length-1];
+	} else {
+		this.ext = '';
+	}
 	
 	this.source = '';  // where did it come from?  e.g. url
 	
@@ -195,7 +217,11 @@ Resource = function(name) {
 
 Resource.prototype = {};
 
-Resource.prototype.loadFromURL = function(url) {
+Resource.prototype.load = function() {
+
+	if (this.onloading) this.onloading(this);
+
+	var url = this.path + this.name;
 	this.source = url;
 	
 	console.log('Loading resource: ',url);
@@ -206,6 +232,91 @@ Resource.prototype.loadFromURL = function(url) {
 	xmlHttp.send( null );
 	
 	this.data = xmlHttp.responseText;
+	
+	this.loaded = true;
+	
+	if (this.onloaded) this.onloaded(this);
+}
+
+Resource.prototype.compileErrorHandler = function(msg,url,lineno) {
+	this.compileerror.msg = msg;
+	this.compileerror.lineno = lineno;
+}
+
+Resource.prototype.compile = function() {
+
+	if (!this.isDir && this.ext == 'jscad') {
+		if (this.oncompiling) this.oncompiling(this);
+	
+		this.compileerror.msg = undefined;
+		this.compileerror.lineno = undefined;
+	
+		// flush out old stuff
+		
+		// test resource has valid syntax
+		window.onCompileError = this.compileErrorHandler;
+
+		var tempblob = new Blob([
+			'<html><head><script type="text/javascript">window.onerror = function(msg,url,lineno) { window.parent.onCompileError(msg,url,lineno); return true; };</script></head>'+
+			'<body><script>\r\n'+
+			this.data+
+			'\r\n</script></body></html>'
+		], {type: 'text/html'});
+		
+		var iframe = $('<iframe id="testiframe"/>');
+		iframe.on('error',function(e) {
+		
+		});
+		iframe.on('load',function(e) {
+			// see what we got?
+			// how to chain?
+		});
+		iframe.attr('src',URL.createObjectURL(tempblob));
+		$('#hidden').append(iframe);
+		
+		
+		/*
+		try {
+			f = new Function(this.data);
+		} catch(e) {
+			
+			console.log(e);
+			return;
+		}
+		
+		
+		// concat data and includes
+		var scr = '';
+		
+		var includes = this.project.settings.include;
+		for (i=0; i<includes.length; i++) {
+			var res = project.getResourceByPath(includes[i]);
+			if (res) {
+				scr += res.data.data + '\r\n';
+			}
+		}
+		
+		scr += this.data;
+		
+		this.combinedScript = scr;
+		
+		console.log('Combined script: '+scr);
+		
+		// build a blob and worker
+		this.blob = new Blob([scr], {type: 'text/javascript'});
+		
+		// compile (report syntax errors)
+		this.worker = new Worker(URL.createObjectURL(this.blob));
+		
+		
+		*/
+		
+	
+	
+		if (this.oncompiled) this.oncompiled(this);
+	} else {
+		// report bad things?
+	}
 }
 
 
@@ -246,35 +357,51 @@ Project.prototype.loadFromURL = function(url) {
 	this.settings.source = url;
 	
 	// go load any resources for the project
-	this.loadResources();
+	this.parseResources();
 }
 
-Project.prototype.loadResources = function() {
+Project.prototype.parseResources = function() {
 	
-	function parseAndLoad(parentNode,path,res) {
+	function parse(parentNode,path,res, project) {
 		// iterate over res contents
 		for (r in res) {
+			var isDir = Array.isArray(res[r].resources);
 			
-			var rtemp = new Resource(res[r].name);
+			var rtemp = new Resource(res[r].name, isDir, path);
+			rtemp.project = project;
 			
 			var node = parentNode.appendChild(rtemp);
 			
-			if (res[r].resources) {
-				parseAndLoad(node, path + rtemp.name + '/', res[r].resources);
-			} else {
-				rtemp.loadFromURL(path + rtemp.name);
+			if (isDir) {
+				parse(node, path + rtemp.name + '/', res[r].resources);
 			}
 				
 		} 
 	}
 	
-	parseAndLoad(this.resources, '', this.settings.resources);
-
+	parse(this.resources, '', this.settings.resources, this);
 }
 
+Project.prototype.loadResources = function() {
+	
+	function iterator(res) {
+		if (res.data) {
+			if (res.data.load) {
+				res.data.load();
+			}
+		}
+	}
+	
+	this.resources.traverseDown(iterator);
+}
 
+Project.prototype.getResourceByPath = function(path) {
+	console.log('Looking for: '+path);
 
-
+	return this.resources.find(function(node) {
+		return node.data.source == path;
+	});
+}
 
 
 

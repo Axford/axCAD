@@ -23,8 +23,6 @@
 	<script src="js/arboreal.js"></script>
 	<script src="js/axCAD.js" ></script>
 
-	<script src="example2.jscad"></script>
-	
 	
 <script>
 	function log(txt) {
@@ -47,12 +45,13 @@
 		
 		initUI();
 		
-		
-		//project.loadFromURL('testProject.json');
-		//updateResourceTree();
-	
-		
 	});
+	
+	window.onerror = function(msg,url,lineno) {
+		console.log('window.onerror: ',msg,url,lineno);
+		// trap top level errors?
+		return true;
+	}
 
 </script>
 
@@ -68,6 +67,7 @@
 	<div id="resourceRibbon" class="ribbon">
 		<div id="openButton" class="button">Open</div>
 		
+		<div class="clear"></div>
 	</div>
 	
 	<div id="resourceTree">
@@ -96,6 +96,8 @@
 	<div id="log">
 	</div>
 </div>
+
+<div id="hidden" style="display:none;"></div>
 
 </body>
 </html>
