@@ -8,8 +8,16 @@ var project;
 var stats;
 var selectedResource;
 var selectedPartFactory;
+
+var projectGitAccordion;
+var github;
+var gitToken = '';
+var gitUser;
+var gitRepo;
+var gitRepoInfo;
 	
 function initUI() {
+	// panel layouts
 	bodyLayout = $('body').layout();
 
 	panelLayout = $('#panel').layout({
@@ -20,16 +28,40 @@ function initUI() {
 		}
 	});
 
+	// projectPanel
+	$('#projectOpenButton').click(function() { openProject(); });
+
+	projectGitAccordion = new jQueryCollapse($("#projectGitAccordion"));
+
+	$('#projectGitConnectButton').click(function(e) {
+		gitToken = $('#projectGitAccordion').find('input[name="projectGitToken"]').val();
+		console.log(gitToken);
+		github = new Github({
+			token: gitToken
+		});
+		
+		loadAndShowGitRepoList();
+	});
+	
+	
+	// editorPanel
 	editor = ace.edit("sourceEditor");
 	editor.setTheme("ace/theme/axcad");
 	editor.getSession().setMode("ace/mode/javascript");
 	editor.getSession().setUseWrapMode(true);
 	editor.setFontSize('14px');
 	
-	$('#projectOpenButton').click(function() { openProject(); });
+	// partFactoryPanel
+	$('#partFactoryContent').scroll(function(e) {
+		var opacity = $(this).scrollTop();
+		opacity = (opacity > 100 ? 100 : opacity) / 300;
+		$(this).css('box-shadow', 'inset 0 5px 10px -5px rgba(0, 0, 0, ' + opacity + ')');
+	});
 	
+	// GL panel
    	initGLViewer();
     animateGLViewer();
+	
 	
 	// resize now to make sure everything is neat and tidy
 	resizeUI();
@@ -37,13 +69,6 @@ function initUI() {
 	// event handlers
 	$( window ).resize(function() {
 		resizeUI();
-	});
-	
-	// pretty things
-	$('#partFactoryContent').scroll(function(e) {
-		var opacity = $(this).scrollTop();
-		opacity = (opacity > 100 ? 100 : opacity) / 300;
-		$(this).css('box-shadow', 'inset 0 5px 10px -5px rgba(0, 0, 0, ' + opacity + ')');
 	});
 }
 
@@ -83,7 +108,7 @@ function initGLViewer() {
 	//light.shadowCameraVisible	= true;
 	//light.position = mesh.geometry.boundingBox.max;
 	light.position.x += 20;
-	light.position.y += 20;
+	light.position.y += 100;
 	light.position.z = 50;
 	
 	scene.add( light );
@@ -121,6 +146,9 @@ function initGLViewer() {
 
 function animateGLViewer() {
 	requestAnimationFrame( animateGLViewer );
+	
+	light.position.x = Math.cos(Date.now()/1000) * 20;
+	light.position.z = Math.cos(Date.now()/3000) * 50;
 	
 	renderer.render( scene, camera );
 	stats.update();
@@ -333,11 +361,9 @@ function editFile(node) {
 	}
 }
 
-function openProject() {
-	var path=prompt("Project path","testProject.json");
-		
+function openProject(path) {	
 	if (path != null) {
-		project.loadFromURL('testProject.json');
+		project.loadFromURL(path);
 		
 		updateResourceTree();
 		
@@ -593,5 +619,144 @@ function visualisePartFactoryCatalogItem(pf,catalogItem) {
 		//$('#partFactoryExampleButton').removeClass('thinking');
 		
 		updatePartFactoryBin(pf);
+	});
+}
+
+function loadAndShowGitRepoList() {
+	gitUser = github.getUser();
+
+	gitUser.repos(function(err, repos) {
+		console.log("user.repos:", repos);
+		
+		// generate list
+		if (repos.length > 0) {
+			var ul = $('<ul/>');
+			ul.css('list-style-type','none');
+			
+			for (i=0; i < repos.length; i++) {
+				repo = repos[i];
+				var li = $('<li/>');
+				var b = $('<div/>');
+				b.append(repo.full_name);
+				b.addClass('smallButton');
+				b.data({'repo':repo});
+				b.click(function (e) {
+					var repo = $(this).data().repo;
+			
+					gitRepo = github.getRepo(repo.owner.login, repo.name);
+					gitRepoInfo = repo;
+	
+					loadAndViewGitBranches(gitRepo);
+				});
+				
+				li.append(b);
+				ul.append(li);
+			}
+			
+			$('#gitRepos').empty();
+			$('#gitRepos').append(ul);
+		} else {
+			$('#gitRepos').empty();
+			$('#gitRepos').append('<p>No repositories found</p>');
+		}
+		
+		projectGitAccordion.close(0);
+		projectGitAccordion.open(1);
+	});
+}
+
+function loadAndViewGitBranches(repo) {	
+	// generate a list of branches
+	gitRepo.listBranches(function(err, branches) {
+		console.log(branches);
+		
+		if (branches.length > 0) {
+			var ul = $('<ul/>');
+			ul.css('list-style-type','none');
+			
+			for (i=0; i < branches.length; i++) {
+				branch = branches[i];
+				var li = $('<li/>');
+				var b = $('<div/>');
+				b.append(branch);
+				b.addClass('smallButton');
+				b.data({'branch':branch});
+				b.click(function(e) {
+					var branch = $(this).data().branch;
+			
+					loadAndViewGitProjects(branch);
+				});
+				
+				li.append(b);
+				ul.append(li);
+			}
+			
+			$('#gitBranches').empty();
+			$('#gitBranches').append('<p>Select a branch of: '+gitRepoInfo.name+'</p>');
+			$('#gitBranches').append(ul);
+			
+			// hide/scroll
+			$('#projectContent').scrollTop($('#gitBranches').position().top);
+		} else {
+			$('#gitBranches').empty();
+			$('#gitBranches').append('<p>No branches found</p>');
+		}
+		
+		projectGitAccordion.close(1);
+		projectGitAccordion.open(2);
+	});
+}
+
+function loadAndViewGitProjects(branch) {
+
+	gitRepo.getTree(branch, function(err, tree) {
+		console.log(tree);
+		
+		if (tree.length > 0) {
+			var ul = $('<ul/>');
+			ul.css('list-style-type','none');
+			
+			for (i=0; i < tree.length; i++) {
+				f = tree[i];
+				
+				var nameParts = f.path.split('.');
+				var ext = '';
+				
+				if (nameParts.length>1) {
+					ext = nameParts[nameParts.length-1];
+				} else {
+					ext = '';
+				}
+				
+				if (ext == 'json') {				
+					var li = $('<li/>');
+					var b = $('<div/>');
+					b.append(f.path);
+					b.addClass('smallButton');
+					b.data({'path':'https://rawgithub.com/'+repo.owner.login +'/'+gitRepoInfo.name+'/'+branch+'/'+f.path});
+					b.click(function(e) {
+						var path = $(this).data().path;
+			
+						openProject(path);
+					});
+					
+					li.append(b);
+					ul.append(li);
+				}
+			}
+			
+			$('#gitProjectFiles').empty();
+			$('#gitProjectFiles').append('<p>Select a project within '+gitRepoInfo.name+' ('+branch+')</p>');
+			$('#gitProjectFiles').append(ul);
+			
+			// hide/scroll
+			$('#projectContent').scrollTop($('#gitProjectFiles').position().top);
+		} else {
+			$('#gitProjectFiles').empty();
+			$('#gitProjectFiles').append('<p>No project files</p>');
+		}
+		
+		projectGitAccordion.close(2);
+		projectGitAccordion.open(3);
 	});
 }

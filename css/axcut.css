@@ -27,6 +27,36 @@ body {
 	color: rgba(0,0,0,0.3);
 }	
 
+.table {
+		border-collapse:collapse;
+	}
+.tr {
+	border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.th {
+	border: 1px solid rgba(0,0,0,0.05);
+	padding: 2px 6px;
+	font-size:14px;
+	font-weight:normal;
+	color:#aaa;
+	text-align:left;
+}
+.td {
+	border: 1px solid rgba(0,0,0,0.05);
+	padding: 2px 6px;
+	font-size:14px;
+}
+
+h2 {
+	
+}
+h2 a {
+	display:block;
+	text-decoration:none;
+	color:black;
+	border-bottom:1px solid #c0c0c0;
+}
+
 #logo {
 	padding: 11px 12px 9px 12px;
 	font-size: 16px;
@@ -122,7 +152,13 @@ body {
 		margin:0;
 	}
 	
-	#partFactoryContent {
+	#projectContent {
+		padding: 6px 12px;
+	}
+	
+	
+#partFactoryContent, 
+#projectContent	{
 		clear:both;
 		padding-left: 12px;
 		padding-right:12px;
@@ -130,7 +166,8 @@ body {
 		overflow:scroll;
 	}
 	
-	#partFactoryContent h2 {
+#partFactoryContent h2,
+#projectContent	h2 {
 		font-size: 16px;
 		font-weight: bold;
 		margin-top:2em;

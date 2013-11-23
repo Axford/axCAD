@@ -3,6 +3,7 @@
 	"resources": [
 		{"name": "example2.jscad"},
 		{"name": "Screws.csv"},
+		{"name": "remoteFile.csv", "src": "http://www.google.com/remoteFile.csv"},
 		{"name":"js",
 		 "resources":[
 		 	{"name":"csg.js"},
