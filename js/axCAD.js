@@ -153,8 +153,6 @@ Catalog.prototype.loadFromQueue = function() {
 		// store a reference with the csv resource linking to this catalog/partFactory
 		if (res.data.partFactories.indexOf(this.parent)<0)
 			res.data.partFactories.push(this.parent);
-			
-		console.log(res.data.partFactories);
 	}
 }
 

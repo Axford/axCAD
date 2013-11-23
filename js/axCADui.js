@@ -406,6 +406,19 @@ function viewPartFactory(node) {
 	
 	var pf = partFactory;
 	
+	// generate source list
+	if (pf.catalog.loadQueue.length>0) {
+		var p = $('<p/>');
+		p.addClass('subtle');
+		p.append('Source(s): ');
+		for (i=0;i<pf.catalog.loadQueue.length;i++){
+			if (i>0) p.append(', ');
+			p.append(pf.catalog.loadQueue[i].src);
+		}
+		$('#partFactoryCatalog').append(p);
+	}
+	
+	// now do the table
 	if (pf.specification.length > 0 && pf.catalog.length > 0) {
 		var table = document.createElement('table');
 		
@@ -525,11 +538,9 @@ function visualisePartFactoryExample(pf) {
 	pf.make(spec, function(part) {
 	
 		// visualise it
-		console.log('Received part');
+		console.log('Received part to visualise');
 		
 		part.visualiseWithGL();
-		
-		console.log(part.csg);
 		
 		var mesh = part.visualisations[0].mesh;
 		mesh.geometry.computeBoundingBox();
@@ -561,7 +572,7 @@ function visualisePartFactoryCatalogItem(pf,catalogItem) {
 	pf.make(catalogItem, function(part) {
 	
 		// visualise it
-		console.log('Received part');
+		console.log('Received part to visualise');
 		
 		part.visualiseWithGL();
 		
