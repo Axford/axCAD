@@ -6,7 +6,7 @@
 //   Three.js
 //   ThreeCSG.js
 //   arboreal.js
-
+//   csv.js
 
 //
 // Utilities
@@ -56,6 +56,34 @@ function getErrorObject(){
   try { throw Error('') } catch(err) { return err; }
 }
 
+
+// 
+// Specification Item
+// -----------------------
+SpecificationItem = function() {
+	this.name = '';
+	this.description = '';
+	this.units = '';
+	this.dataType = Number;
+	this.visible = true;
+	this.default = 0;
+	this.isKey = false;
+	this.min = '';
+	this.max = '';
+}
+SpecificationItem.prototype.fromArgs = function(name,desc,units,dataType,visible,def,isKey,min,max) {
+	this.name = name;
+	this.description =desc;
+	this.units = units;
+	this.dataType=dataType;
+	this.visible=visible;
+	this.default=def;
+	this.isKey=isKey;
+	this.min=min;
+	this.max=max;
+}
+
+
 //
 // Specification
 // -------------
@@ -78,7 +106,8 @@ Specification.prototype.add = function(name,desc,units,dataType,visible,def,isKe
 		default:def,
 		isKey:isKey,
 		min:min,
-		max:max
+		max:max,
+		value:0
 	});
 }
 
@@ -88,15 +117,73 @@ Specification.prototype.add = function(name,desc,units,dataType,visible,def,isKe
 // -------
 
 Catalog = function() {
+	this.parent = null;
+	this.loadQueue = [];
 }
 Catalog.prototype = [];
 
 Catalog.prototype.load = function(args) {
-	// queue it up
+	// queue it up, args of the form:
+	// {src:'Screws.csv',autoCreate:true, includeExample:true}
+	
+	if (args.src) {
+		this.loadQueue.push(args);
+	}
+}
+
+Catalog.prototype.loadFromQueue = function() {
+	for (i=0;i<this.loadQueue.length;i++) {
+		var q = this.loadQueue[i];
+		var res = project.getResourceByPath(q.src);
+		
+		// parse csv
+		var c = CSV.parse(res.data.data);
+		
+		// now build each catalog item in turn
+		for (j=1;j<c.length;j++) {
+			var args = {};
+			var row = c[j];
+			
+			for (k=0;k<row.length;k++) {
+				args[c[0][k]] = row[k];
+			}
+			this.add(args);
+		}
+		
+		// store a reference with the csv resource linking to this catalog/partFactory
+		if (res.data.partFactories.indexOf(this.parent)<0)
+			res.data.partFactories.push(this.parent);
+			
+		console.log(res.data.partFactories);
+	}
+}
+
+Catalog.prototype.thaw = function(c) {
+	// populate self from c
+	for (key in c) {
+		this[key] = c[key];
+	}
 }
 
 Catalog.prototype.add = function(args) {
-	this.push(args);
+	// get a default spec
+	var spec = this.parent.getDefaultSpec();
+	
+	// add a partNo
+	var si = new SpecificationItem();
+	si.name = 'partNo';
+	si.description = 'Catalog Part Number';
+	si.isKey = true;
+	spec.partNo = si;	
+	
+	// overwrite relevant values with args
+	for (key in args) {
+		if (spec[key])
+			spec[key].value = args[key];
+	}
+	
+	// and add to the catalog
+	this.push(spec);
 }
 
 
@@ -114,13 +201,14 @@ var PartFactory = (function() {
 
 		this.specification = new Specification();
 		this.catalog = new Catalog();
+		this.catalog.parent = this;
 		
 		this.resource = null;  // containing resource
 		this.outfeed = [];  // queue for "customers" who are waiting for parts, holds callbacks against specs
+		this.partBin = [];  // cache of parts
 	}
 
 	cls.prototype.spec = function() {
-		console.log(this.specification);
 		return this.specification;
 	}
 
@@ -133,7 +221,9 @@ var PartFactory = (function() {
 	}
 
 	cls.prototype.freeze = function() {
+		this.catalog.parent = null;
 		return JSON.stringify(this);
+		this.catalog.parent = this;
 	}
 	
 	cls.prototype.thaw = function(d) {
@@ -143,7 +233,11 @@ var PartFactory = (function() {
 		
 		// thaw specification and catalog
 		this.specification = d.specification;
-		this.catalog = d.catalog;
+		this.catalog.thaw(d.catalog);
+		this.catalog.parent = this;
+		
+		// load referenced part catalogs
+		this.catalog.loadFromQueue();
 	}
 
 	cls.prototype.getDefaultSpec = function() {
@@ -233,7 +327,7 @@ Part.prototype.visualiseWithGL = function() {
 
 Part.prototype.thaw = function(ref) {
 	var parsed = JSON.parse(ref);
-	this.csg = CSG.fromObject(parsed.csg);
+	this.csg = CSG.fromCompactBinary(parsed.csg);
 }
 
 
@@ -250,8 +344,6 @@ GLVisualisation = function(part) {
 }
 
 GLVisualisation.prototype.compile = function() {
-	console.log('compiling...');	
-	
 	var csg = this.part.csg;
 	
 	var geom =  THREE.CSG.fromCSG( csg );
@@ -261,10 +353,6 @@ GLVisualisation.prototype.compile = function() {
     {
       color: 0xc0c0c0
     }));
-	
-	
-	
-	console.log('Compilation complete');
 	
 	return this.mesh;
 }
@@ -290,7 +378,7 @@ WorkerManager = function() {
 					break;
 					
 				case 'partFactory.make':
-					me.partFactoryMake(e.data.data);
+					me.partFactoryMake(JSON.parse(e.data.data));
 					break;
 			
 				default:
@@ -352,6 +440,7 @@ WorkerManager.prototype.partFactoryMake = function(d) {
 		if (pf.name == partName) {
 			// make something!		
 			part = pf.make(partSpec);
+			part.csg = part.csg.toCompactBinary();
 		}
 	}	
 	
@@ -480,7 +569,7 @@ Resource.prototype.validateSyntax = function(cb) {
 
 Resource.prototype.sendToWorker = function(cmd,data) {
 	console.log('Sending to worker: '+cmd+': '+data);
-	this.worker.postMessage({cmd:cmd, data:data});
+	this.worker.postMessage({cmd:cmd, data:JSON.stringify(data)});
 }
 
 Resource.prototype.receivePartFactory = function(pf) {
@@ -496,8 +585,24 @@ Resource.prototype.receivePartFactory = function(pf) {
 			'spec':JSON.stringify(spec),
 			'cb':cb
 		});
-	
-		npf.resource.sendToWorker('partFactory.make',{'part':npf.name,'spec':spec});
+		
+		// search for a matching object in the partBin
+		var part = null;
+		var specJSON = JSON.stringify(spec);
+		for (i=0;i<npf.partBin.length;i++) {
+			if (JSON.stringify(npf.partBin[i].spec) == specJSON) {
+				console.log('Found a part in the bin');
+				part = npf.partBin[i];
+				break;
+			}
+		}
+		
+		if (part) {
+			cb(part);
+		} else {
+			// if nothing matches, set the factory going
+			npf.resource.sendToWorker('partFactory.make',{'part':npf.name,'spec':spec});
+		}
 	}
 	
 	this.partFactories.push(npf);
@@ -527,13 +632,26 @@ Resource.prototype.receivePart = function(p) {
 	var part = new Part(JSON.parse(p.spec));
 	part.thaw(p.part);
 	
-	for (i=0;i<pf.outfeed.length;i++) {
-		if (pf.outfeed[i].spec == targetSpec) {
-		
-			// firing callback
-			pf.outfeed[i].cb(part);
+	// add to part bin
+	pf.partBin.push(part);
+	
+	// search outfeed for matching callback(s)
+	for (i=pf.outfeed.length-1;i>=0;i--) {
+		if (pf.outfeed[i] && pf.outfeed[i].spec) {
+			if (pf.outfeed[i].spec == targetSpec) {
+			
+				// firing callback
+				pf.outfeed[i].cb(part);
+				
+				// remove callback from outfeed
+				pf.outfeed[i] = null;
+				pf.outfeed = pf.outfeed.splice(i+1,1);
+			}
 		}
 	}
+
+	// fire the newpart message
+	if (this.onnewpart) this.onnewpart(this);
 	
 }
 
@@ -549,7 +667,6 @@ Resource.prototype.onWorkerMessage = function(e) {
 				
 			case 'partFactory.made':
 				this.resource.receivePart(e.data.data);
-				if (this.resource.onnewpart) this.resource.onnewpart(this.resource);
 				break;
 				
 			case 'error':

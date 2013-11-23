@@ -33,7 +33,8 @@ Screw.catalog.load({src:'Screws.csv',autoCreate:true, includeExample:true});
 
 // the catalog can also be programmatically populated, specified values will
 // be merged with defaults from the specification
-Screw.catalog.add({r:5, l:20});
+Screw.catalog.add({partNo:'M5x20', r:5, l:20});
+Screw.catalog.add({partNo:'M12x50', r:12, l:50});
 
 // Gather
 // ------
@@ -62,9 +63,9 @@ Screw.make = function(spec) {
 	var part = new Part(spec);
 	
 	// do some CSG stuff to make a screw based on the spec
-	var cube = CSG.roundedCube({radius: 10, roundradius: 2, resolution: 16});
+	var cube = CSG.roundedCube({radius: 3, roundradius: 2, resolution: 16});
   	var sphere = CSG.sphere({radius: 10, resolution: 16}).translate([10, 5, 5]);
-	var cyl = CSG.cylinder({start:[0,0,0], end:[3,40,0], radius:5});
+	var cyl = CSG.cylinder({start:[0,0,0], end:[0,spec.l.value,0], radius:spec.r.value});
   
   	var csg = cube.union(cyl).union(sphere);
 

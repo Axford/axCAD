@@ -7,6 +7,7 @@ var geometry, material;
 var project;
 var stats;
 var selectedResource;
+var selectedPartFactory;
 	
 function initUI() {
 	bodyLayout = $('body').layout();
@@ -36,6 +37,13 @@ function initUI() {
 	// event handlers
 	$( window ).resize(function() {
 		resizeUI();
+	});
+	
+	// pretty things
+	$('#partFactoryContent').scroll(function(e) {
+		var opacity = $(this).scrollTop();
+		opacity = (opacity > 100 ? 100 : opacity) / 300;
+		$(this).css('box-shadow', 'inset 0 5px 10px -5px rgba(0, 0, 0, ' + opacity + ')');
 	});
 }
 
@@ -211,6 +219,9 @@ function updateResourceTree() {
 			node.data.onchanged = function(node) {
 				updateResourceContents(node);
 			}
+			node.data.onnewpart = function(node) {
+				updateResourceContents(node);
+			}
 			
 			parentDomNode.append(n);
 		}
@@ -256,6 +267,9 @@ function updateResourceContents(node) {
 			var d = $('<div/>');
 			d.addClass('partFactory');
 			d.html(pf.name);
+			pf.domElement = d;
+			if (pf.partBin.length > 0)
+				d.append(' ['+pf.partBin.length+']');
 			d.data({partFactory:pf, resource:node});
 			d.click(function(e) {
 				e.stopPropagation();
@@ -306,7 +320,10 @@ function editFile(node) {
 		
 		editor.setValue(resource.data.data, lineNo - 5);
 		editor.gotoLine(lineNo);
-		editor.getSession().setMode("ace/mode/javascript");
+		if (resource.data.ext == 'csv')
+			editor.getSession().setMode("ace/mode/text")
+		else
+			editor.getSession().setMode("ace/mode/javascript");
 		editor.resourceID = resID;	
 		
 		$('#sourceResourceName').val(resource.data.name);
@@ -338,7 +355,6 @@ function viewPartFactory(node) {
 	var partFactory = $(node).data().partFactory;
 	var resource = $(node).data().resource;
 	
-	
 	$('#partFactoryName').html(partFactory.name + ' <span class="subtle">PartFactory</div>');
 
 	$('#partFactoryDesc').html(partFactory.description);
@@ -346,7 +362,8 @@ function viewPartFactory(node) {
 	
 	// update button event handler
 	$('#partFactoryExampleButton').click(function(e) {
-		visualisePartFactoryExample(partFactory);
+		if (!$('#partFactoryExampleButton').hasClass('thinking'))
+			visualisePartFactoryExample(partFactory);
 	});
 	
 	// generate specification table
@@ -387,18 +404,162 @@ function viewPartFactory(node) {
 	// generate catalog table
 	$('#partFactoryCatalog').empty();
 	
+	var pf = partFactory;
+	
+	if (pf.specification.length > 0 && pf.catalog.length > 0) {
+		var table = document.createElement('table');
+		
+		// build headings
+		var thr = document.createElement('tr');
+		var th = document.createElement('th');
+		th.textContent = 'partNo';
+		thr.appendChild(th);
+		
+		for (i=0; i < pf.specification.length; i++) {
+			if (pf.specification[i].visible) {
+				var th = document.createElement('th');
+				th.textContent = pf.specification[i].name;
+				thr.appendChild(th);
+			}
+		}
+		
+		var th = document.createElement('th');
+		th.textContent = '';  // column for controls	
+		thr.appendChild(th);
+		table.appendChild(thr);
+		
+		// populate rows
+		for (i=0; i < pf.catalog.length; i++) {
+			var tr = document.createElement('tr');
+				
+			// for each item in the catalog
+			// extract relevant spec values
+			
+			for (j=0; j<thr.children.length-1; j++) {
+				var td = document.createElement('td');
+				td.textContent = pf.catalog[i][thr.children[j].textContent].value;
+				tr.appendChild(td);
+			}
+			
+			// add some buttons
+			var td = $('<td/>');
+			var div = $('<div/>');
+			div.addClass('smallButton');
+			div.html('View');
+			div.data({'pf':pf,'spec':pf.catalog[i]});
+			var catalogSpec = pf.catalog[i];
+			div.click(function(e) {
+				var pf = $(e.target).data().pf;
+				var spec = $(e.target).data().spec;
+				visualisePartFactoryCatalogItem(pf, spec);
+			});
+			td.append(div);
+			$(tr).append(td);
+			table.appendChild(tr);
+		}
+		
+		$('#partFactoryCatalog').append(table);
+	}
 	
 	
+	updatePartFactoryBin(partFactory);
+	
+}
+
+function updatePartFactoryBin(pf) {
+	$('#partFactoryBin').empty();
+	
+	
+	if (pf.specification.length > 0 && pf.partBin.length > 0) {
+		var table = document.createElement('table');
+		
+		// build headings
+		var thr = document.createElement('tr');
+		for (i=0; i < pf.specification.length; i++) {
+			var th = document.createElement('th');
+			th.textContent = pf.specification[i].name;
+			thr.appendChild(th);
+		}
+		table.appendChild(thr);
+		
+		// populate rows
+		for (i=0; i < pf.partBin.length; i++) {
+			var tr = document.createElement('tr');
+			
+			// for each item in the bin
+			// extract relevant spec values
+			
+			for (j=0; j<thr.children.length; j++) {
+				var td = document.createElement('td');
+				td.textContent = pf.partBin[i].spec[thr.children[j].textContent].value;
+				tr.appendChild(td);
+			}
+			
+			table.appendChild(tr);
+		}
+		
+		$('#partFactoryBin').append(table);
+	}
+}
+
+function emptySceneOfObject3Ds() {
+	var obj, i;
+	for ( i = scene.children.length - 1; i >= 0 ; i -- ) {
+		obj = scene.children[ i ];
+		if ( obj instanceof THREE.Object3D && obj.id && obj.id=='partData') {
+			scene.remove(obj);
+		}
+	}
 }
 
 
 function visualisePartFactoryExample(pf) {
+	
+	// disable button
+	$('#partFactoryExampleButton').addClass('thinking');
 	
 	// generate a default specification
 	var spec = pf.getDefaultSpec();
 	
 	// go make a suitable part
 	pf.make(spec, function(part) {
+	
+		// visualise it
+		console.log('Received part');
+		
+		part.visualiseWithGL();
+		
+		console.log(part.csg);
+		
+		var mesh = part.visualisations[0].mesh;
+		mesh.geometry.computeBoundingBox();
+		
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		
+		emptySceneOfObject3Ds();
+		
+		var obj = new THREE.Object3D();
+		obj.add(mesh);
+		obj.id = 'partData';
+		scene.add(obj);
+		
+		// enable button
+		$('#partFactoryExampleButton').removeClass('thinking');
+		
+		updatePartFactoryBin(pf);
+	});
+}
+
+
+function visualisePartFactoryCatalogItem(pf,catalogItem) {
+	
+	// disable button
+	//$('#partFactoryExampleButton').addClass('thinking');
+	
+	// go make a suitable part
+	pf.make(catalogItem, function(part) {
+	
 		// visualise it
 		console.log('Received part');
 		
@@ -410,9 +571,16 @@ function visualisePartFactoryExample(pf) {
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;
 		
-		scene.add(mesh);
+		emptySceneOfObject3Ds();
+		
+		var obj = new THREE.Object3D();
+		obj.add(mesh);
+		obj.id = 'partData';
+		scene.add(obj);
+		
+		// enable button
+		//$('#partFactoryExampleButton').removeClass('thinking');
+		
+		updatePartFactoryBin(pf);
 	});
-	
-	
-	
 }

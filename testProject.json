@@ -2,6 +2,7 @@
 	"name": "Test Project",
 	"resources": [
 		{"name": "example2.jscad"},
+		{"name": "Screws.csv"},
 		{"name":"js",
 		 "resources":[
 		 	{"name":"csg.js"},
