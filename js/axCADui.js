@@ -10,11 +10,6 @@ var selectedResource;
 var selectedPartFactory;
 
 var projectGitAccordion;
-var github;
-var gitToken = '';
-var gitUser;
-var gitRepo;
-var gitRepoInfo;
 	
 function initUI() {
 	// panel layouts
@@ -29,16 +24,12 @@ function initUI() {
 	});
 
 	// projectPanel
-	$('#projectOpenButton').click(function() { openProject(); });
-
 	projectGitAccordion = new jQueryCollapse($("#projectGitAccordion"));
 
 	$('#projectGitConnectButton').click(function(e) {
-		gitToken = $('#projectGitAccordion').find('input[name="projectGitToken"]').val();
+		var gitToken = $('#projectGitAccordion').find('input[name="projectGitToken"]').val();
 		console.log(gitToken);
-		github = new Github({
-			token: gitToken
-		});
+		fileSystemBroker.connectToGithub(gitToken);
 		
 		loadAndShowGitRepoList();
 	});
@@ -363,13 +354,13 @@ function editFile(node) {
 
 function openProject(path) {	
 	if (path != null) {
-		project.loadFromURL(path);
+		project.loadFromGithub(path, function(){
+			updateResourceTree();
 		
-		updateResourceTree();
+			project.loadResources();
 		
-		project.loadResources();
-		
-		project.compileResources();
+			//project.compileResources();
+		});
 	}
 }
 
@@ -623,9 +614,8 @@ function visualisePartFactoryCatalogItem(pf,catalogItem) {
 }
 
 function loadAndShowGitRepoList() {
-	gitUser = github.getUser();
-
-	gitUser.repos(function(err, repos) {
+	
+	fileSystemBroker.getUserRepos(function(err, repos) {
 		console.log("user.repos:", repos);
 		
 		// generate list
@@ -643,7 +633,7 @@ function loadAndShowGitRepoList() {
 				b.click(function (e) {
 					var repo = $(this).data().repo;
 			
-					gitRepo = github.getRepo(repo.owner.login, repo.name);
+					var gitRepo = fileSystemBroker.getGithubRepo(repo.owner.login, repo.name);
 					gitRepoInfo = repo;
 	
 					loadAndViewGitBranches(gitRepo);
@@ -667,7 +657,7 @@ function loadAndShowGitRepoList() {
 
 function loadAndViewGitBranches(repo) {	
 	// generate a list of branches
-	gitRepo.listBranches(function(err, branches) {
+	fileSystemBroker.getGithubRepoBranches(function(err, branches) {
 		console.log(branches);
 		
 		if (branches.length > 0) {
@@ -709,7 +699,7 @@ function loadAndViewGitBranches(repo) {
 
 function loadAndViewGitProjects(branch) {
 
-	gitRepo.getTree(branch, function(err, tree) {
+	fileSystemBroker.getGithubRepoTree(branch, function(err, tree) {
 		console.log(tree);
 		
 		if (tree.length > 0) {
@@ -733,7 +723,7 @@ function loadAndViewGitProjects(branch) {
 					var b = $('<div/>');
 					b.append(f.path);
 					b.addClass('smallButton');
-					b.data({'path':'https://rawgithub.com/'+repo.owner.login +'/'+gitRepoInfo.name+'/'+branch+'/'+f.path});
+					b.data({'path':f.path});
 					b.click(function(e) {
 						var path = $(this).data().path;
 			

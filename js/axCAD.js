@@ -519,6 +519,34 @@ Resource.prototype.load = function() {
 }
 
 
+Resource.prototype.loadFromGithub = function() {
+
+	if (this.isDir) return;
+
+	if (this.onloading) this.onloading(this);
+
+	var url = this.path + this.name;
+	this.source = url;
+	
+	console.log('Loading resource: ',url);
+	
+	var me = this;
+	
+	fileSystemBroker.readGithubFile(url, function(err,data) {
+	
+		me.data = data;
+	
+		me.loaded = true;
+	
+		if (me.onloaded) me.onloaded(me);
+		
+		// auto compile if jscad file
+		if (me.ext == 'jscad')
+			me.compile();
+	});
+}
+
+
 resourceCompileErrorHandler = function(msg,url,lineNo,source) {
 	// assume a project object has been defined!
 	var res = project.getResourceByPath(source);
@@ -699,6 +727,7 @@ Resource.prototype.reallyCompile = function(cb) {
 	var scr = '';
 	
 	var includes = this.project.settings.include;
+	console.log(includes);
 	for (i=0; i<includes.length; i++) {
 		var res = project.getResourceByPath(includes[i]);
 		if (res) {
@@ -823,6 +852,29 @@ Project.prototype.loadFromURL = function(url) {
 	this.parseResources();
 }
 
+Project.prototype.loadFromGithub = function(path, cb) {
+
+	console.log('Loading project: ',path);
+
+	var project = this;
+	
+	fileSystemBroker.readGithubFile(path, function(err,data) {
+		console.log(data);
+	
+		// expect in JSON format
+		project.settings = JSON.parse(data);
+		project.settings.source = path;
+		
+		// extract name
+		project.name = project.settings.name;
+		
+		// go load any resources for the project
+		project.parseResources();
+		
+		if (cb) cb();
+	});
+}
+
 Project.prototype.parseResources = function() {
 	
 	function parse(parentNode,path,res, project) {
@@ -849,8 +901,8 @@ Project.prototype.loadResources = function() {
 	
 	function iterator(res) {
 		if (res.data) {
-			if (res.data.load) {
-				res.data.load();
+			if (res.data.loadFromGithub) {
+				res.data.loadFromGithub();
 			}
 		}
 	}
@@ -881,5 +933,54 @@ Project.prototype.compileResources = function() {
 }
 
 
+//
+// FileSystemBroker
+// -----------------
 
+FileSystemBroker = function() {
+	this.github;
+	this.gitToken = '';
+	this.gitUser;
+	this.gitRepo;
+	this.gitBranch = '';
+	this.gitRepoInfo;
+}
 
+FileSystemBroker.prototype = {};
+
+FileSystemBroker.prototype.connectToGithub = function(token) {
+	this.gitToken = token;
+	this.github = new Github({
+		'token': token
+	});
+	
+	this.gitUser = this.github.getUser();
+}
+
+FileSystemBroker.prototype.getUserRepos = function(cb) {
+	if (this.github && this.gitUser) 
+		this.gitUser.repos(cb)
+	else
+		cb('Not connected to git', undefined);
+}
+
+FileSystemBroker.prototype.getGithubRepo = function(owner,name) {
+	this.gitRepo = this.github.getRepo(owner,name);
+	return this.gitRepo;
+}	
+
+FileSystemBroker.prototype.getGithubRepoBranches = function(cb) {
+	this.gitRepo.listBranches(cb);
+}
+
+FileSystemBroker.prototype.getGithubRepoTree = function(branch, cb) {
+	this.gitBranch = branch;
+	this.gitRepo.getTree(branch, cb);
+}
+
+FileSystemBroker.prototype.readGithubFile = function(path, cb) {
+	this.gitRepo.read(this.gitBranch, path, cb);
+}
+
+// global broker
+var fileSystemBroker = new FileSystemBroker();
