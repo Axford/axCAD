@@ -201,9 +201,14 @@ var PartFactory = (function() {
 		this.catalog = new Catalog();
 		this.catalog.parent = this;
 		
+		this.working = false;  // true when the factory is working
+		
 		this.resource = null;  // containing resource
 		this.outfeed = [];  // queue for "customers" who are waiting for parts, holds callbacks against specs
 		this.partBin = [];  // cache of parts
+		
+		this.onStartProduction = null;
+		this.onProductionComplete = null;
 	}
 
 	cls.prototype.spec = function() {
@@ -534,15 +539,20 @@ Resource.prototype.loadFromGithub = function() {
 	
 	fileSystemBroker.readGithubFile(url, function(err,data) {
 	
-		me.data = data;
-	
-		me.loaded = true;
-	
-		if (me.onloaded) me.onloaded(me);
+		if (err) {
+			console.log('Unable to load resource: '+url+', because: '+err);
+		} else {		
+			me.data = data;
 		
-		// auto compile if jscad file
-		if (me.ext == 'jscad')
-			me.compile();
+			me.loaded = true;
+		
+			if (me.onloaded) me.onloaded(me);
+			
+			// auto compile if jscad file
+			if (me.ext == 'jscad')
+				me.compile();
+				
+		}
 	});
 }
 
@@ -606,6 +616,9 @@ Resource.prototype.receivePartFactory = function(pf) {
 	
 	// override production methods
 	npf.make = function(spec, cb) {
+		npf.working = true;
+		if (npf.onStartProduction) npf.onStartProduction(npf);
+		
 		// register the callback in the outfeed against the spec
 		npf.outfeed.push({
 			'spec':JSON.stringify(spec),
@@ -624,7 +637,9 @@ Resource.prototype.receivePartFactory = function(pf) {
 		}
 		
 		if (part) {
+			npf.working = false;
 			cb(part);
+			if (npf.onProductionComplete) npf.onProductionComplete(npf);
 		} else {
 			// if nothing matches, set the factory going
 			npf.resource.sendToWorker('partFactory.make',{'part':npf.name,'spec':spec});
@@ -676,9 +691,10 @@ Resource.prototype.receivePart = function(p) {
 		}
 	}
 
-	// fire the newpart message
-	if (this.onnewpart) this.onnewpart(this);
+	pf.working = false;
 	
+	// fire the production complete message
+	if (pf.onProductionComplete) pf.onProductionComplete(pf);
 }
 
 Resource.prototype.onWorkerMessage = function(e) {
@@ -727,7 +743,6 @@ Resource.prototype.reallyCompile = function(cb) {
 	var scr = '';
 	
 	var includes = this.project.settings.include;
-	console.log(includes);
 	for (i=0; i<includes.length; i++) {
 		var res = project.getResourceByPath(includes[i]);
 		if (res) {
@@ -765,6 +780,28 @@ Resource.prototype.reallyCompile = function(cb) {
 Resource.prototype.compile = function() {
 
 	if (!this.isDir && this.ext == 'jscad') {
+	
+		// check "includes" have been loaded
+		var allDone = true;
+		var includes = this.project.settings.include;
+		for (i=0; i<includes.length; i++) {
+			var res = project.getResourceByPath(includes[i]);
+			if (res) {
+				if (!res.data.loaded) {
+					allDone = false;
+					break;
+				}
+			}
+		}
+		if (!allDone) {
+			var me = this;
+			setTimeout(function() {
+				me.compile();
+			},10);
+			return;
+		}
+	
+	
 		if (this.oncompiling) this.oncompiling(this);
 	
 		// clear old errors
@@ -859,7 +896,6 @@ Project.prototype.loadFromGithub = function(path, cb) {
 	var project = this;
 	
 	fileSystemBroker.readGithubFile(path, function(err,data) {
-		console.log(data);
 	
 		// expect in JSON format
 		project.settings = JSON.parse(data);

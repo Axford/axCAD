@@ -238,9 +238,6 @@ function updateResourceTree() {
 			node.data.onchanged = function(node) {
 				updateResourceContents(node);
 			}
-			node.data.onnewpart = function(node) {
-				updateResourceContents(node);
-			}
 			
 			parentDomNode.append(n);
 		}
@@ -286,7 +283,18 @@ function updateResourceContents(node) {
 			var d = $('<div/>');
 			d.addClass('partFactory');
 			d.html(pf.name);
+			
 			pf.domElement = d;
+			
+			pf.onStartProduction = function(spf) {
+				console.log('received onStartProduction');
+				spf.domElement.addClass('working');
+			}
+			pf.onProductionComplete = function(spf) {
+				console.log('received onProdComplete');
+				spf.domElement.removeClass('working');
+			}
+			
 			if (pf.partBin.length > 0)
 				d.append(' ['+pf.partBin.length+']');
 			d.data({partFactory:pf, resource:node});

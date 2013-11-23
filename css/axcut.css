@@ -543,6 +543,9 @@ iframe.ui-layout-mask {}	/* extra mask for objects/applets */
 	color:black;
 }
 
+#resourceTree li div.working {
+	color:red !important;
+}
 
 #resourceTree li div:hover  {
 	background-color: rgba(0,0,0,0.05);
