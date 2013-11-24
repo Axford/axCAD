@@ -64,7 +64,7 @@ Screw.make = function(spec) {
 	
 	// do some CSG stuff to make a screw based on the spec
 	var capH = spec.r.v * 1.5;
-	var capR = spec.r.v * 1.5;
+	var capR = spec.r.v * 1.6;
 	var cap = CSG.cylinder({start:[0,0,-capH], end:[0,0,0], radius:capR});
 	var cyl = CSG.cylinder({start:[0,0,0], end:[0,0,spec.l.value], radius:spec.r.value});
   
