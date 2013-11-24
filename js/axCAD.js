@@ -425,6 +425,9 @@ WorkerManager.prototype.start = function() {
 	
 	// processes
 
+	
+	// send a completion message once we're all done
+	this.send('compiled','Compiled');
 }
 
 WorkerManager.prototype.partFactoryMake = function(d) {
@@ -554,6 +557,25 @@ Resource.prototype.loadFromGithub = function() {
 				
 		}
 	});
+}
+
+Resource.prototype.updateData = function(data) {
+	if (this.isDir) return;
+
+	if (this.onloading) this.onloading(this);
+
+	var me = this;
+	me.data = data;
+	me.loaded = true;
+		
+	if (me.onloaded) me.onloaded(me);
+			
+	// auto compile if jscad file
+	if (me.ext == 'jscad')
+		me.compile();
+		
+	// if I'm an include file?  tell everyone to re-compile
+	// TODO
 }
 
 
@@ -698,7 +720,7 @@ Resource.prototype.receivePart = function(p) {
 }
 
 Resource.prototype.onWorkerMessage = function(e) {
-	//console.log('Received from worker: '+e.data.cmd + ', '+e.data.data);
+	console.log('Received from worker: '+e.data.cmd + ', '+e.data.data);
 	
 	if (e.data && e.data.cmd) {
 		switch(e.data.cmd) {
@@ -709,6 +731,11 @@ Resource.prototype.onWorkerMessage = function(e) {
 				
 			case 'partFactory.made':
 				this.resource.receivePart(e.data.data);
+				break;
+				
+			case 'compiled':
+				// fully compiled!
+				if (this.oncompiled) this.oncompiled(this);
 				break;
 				
 			case 'error':
@@ -760,12 +787,18 @@ Resource.prototype.reallyCompile = function(cb) {
 	
 	this.combinedScript = scr;
 	
+	// clear old objects
+	this.blob = null;
+	if (this.worker) this.worker.terminate();
+	this.worker = null;
 	
 	// build a blob and worker
 	this.blob = new Blob([scr], {type: 'text/javascript'});
 	
 	// compile
-	this.worker = new Worker(URL.createObjectURL(this.blob));
+	if (this.blobURL) URL.revokeObjectURL(this.blobURL);
+	this.blobURL = URL.createObjectURL(this.blob);
+	this.worker = new Worker(this.blobURL);
 	this.worker.resource = this;
 	
 	this.worker.addEventListener('message', this.onWorkerMessage, false);
@@ -814,6 +847,8 @@ Resource.prototype.compile = function() {
 		this.assemblyLines = [];
 		this.processes = [];
 		
+		console.log('About to compile...',this);
+		
 		var me = this;
 	
 		var actions = [
@@ -828,12 +863,8 @@ Resource.prototype.compile = function() {
 					me.reallyCompile(cb)
 				else
 					cb();
-			},
-			// fire completion event
-			function(cb) { 
-				if (me.oncompiled) me.oncompiled(me);
-				cb();
 			}
+			// got to the end, but partFactories,etc won't yet be extracted
 		];
 	
 		doInSequence(actions);

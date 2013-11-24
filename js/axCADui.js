@@ -8,6 +8,9 @@ var project;
 var stats;
 var selectedResource;
 var selectedPartFactory;
+var visualisedPartFactory;
+var visualisedPartFactoryResource;
+var visualisedSpec;
 
 var projectGitAccordion;
 	
@@ -226,6 +229,11 @@ function updateResourceTree() {
 				else {
 					node.domElement.children('div').addClass('compiled');
 				}
+				
+				console.log('oncompiled');
+				
+				// revisualise? - TODO - detect whether this really needs doing!
+				visualiseAgain();
 			}
 			node.data.onerror = function(node) {
 				if (node.compileError.msg) {
@@ -339,7 +347,6 @@ function editFile(node) {
 		
 		// mark selected not in resource list
 		selectedResource = $(node);
-	
 		selectedResource.children('div').addClass('selected');
 		
 		var lineNo = -1;
@@ -354,6 +361,17 @@ function editFile(node) {
 		editor.resourceID = resID;	
 		
 		$('#sourceResourceName').val(resource.data.name);
+		
+		// setup event handles
+		$('#sourceCompileButton').off();
+		$('#sourceCompileButton').click(function(e) {
+			resource.data.updateData(editor.getValue());
+		});
+		
+		$('#sourceCommitButton').off();
+		$('#sourceCommitButton').click(function(e) {
+			// commit to github
+		});
 		
 	} else {
 		// not yet loaded...
@@ -386,6 +404,7 @@ function viewPartFactory(node) {
 	$('#partFactoryAuthor').html('Created by '+partFactory.author);
 	
 	// update button event handler
+	$('#partFactoryExampleButton').off();
 	$('#partFactoryExampleButton').click(function(e) {
 		if (!$('#partFactoryExampleButton').hasClass('thinking'))
 			visualisePartFactoryExample(partFactory);
@@ -559,66 +578,75 @@ function visualisePartFactoryExample(pf) {
 	// generate a default specification
 	var spec = pf.getDefaultSpec();
 	
-	// go make a suitable part
-	pf.make(spec, function(part) {
-	
-		// visualise it
-		console.log('Received part to visualise');
-		
-		part.visualiseWithGL();
-		
-		var mesh = part.visualisations[0].mesh;
-		mesh.geometry.computeBoundingBox();
-		
-		mesh.castShadow = true;
-		mesh.receiveShadow = true;
-		
-		emptySceneOfObject3Ds();
-		
-		var obj = new THREE.Object3D();
-		obj.add(mesh);
-		obj.id = 'partData';
-		scene.add(obj);
-		
+	visualisePartWithSpec(pf, spec, function(err) {	
 		// enable button
 		$('#partFactoryExampleButton').removeClass('thinking');
-		
-		updatePartFactoryBin(pf);
 	});
 }
 
 
 function visualisePartFactoryCatalogItem(pf,catalogItem) {
 	
-	// disable button
-	//$('#partFactoryExampleButton').addClass('thinking');
+	visualisePartWithSpec(pf,catalogItem);
+}
+
+function visualisePartWithSpec(pf,spec, cb) {
+	if (pf && spec) {
+		console.log(pf);
+		
+		visualisedPartFactoryResource = undefined;
+		visualisedPartFactory = undefined;
+		visualisedSpec = undefined;
+		
+		// go make a suitable part
+		pf.make(spec, function(part) {
+		
+			// visualise it
+			console.log('Received part to visualise');
+			
+			part.visualiseWithGL();
+			
+			var mesh = part.visualisations[0].mesh;
+			mesh.geometry.computeBoundingBox();
+			
+			mesh.castShadow = true;
+			mesh.receiveShadow = true;
+			
+			emptySceneOfObject3Ds();
+			
+			var obj = new THREE.Object3D();
+			obj.add(mesh);
+			obj.id = 'partData';
+			scene.add(obj);
+			
+			updatePartFactoryBin(pf);
+			
+			visualisedPartFactoryResource = pf.resource.source;
+			visualisedPartFactory = pf.name;
+			visualisedSpec = spec;
+			
+			if (cb) cb(null);
+		});
+	} else {
+		if (cb) cb('Error');
+	}
+}
+
+function visualiseAgain() {
+	// used to refresh a visual when a script is recompiled
+	console.log('visualisAgain',visualisedPartFactoryResource,visualisedPartFactory,visualisedSpec);
 	
-	// go make a suitable part
-	pf.make(catalogItem, function(part) {
+	if (visualisedPartFactory && visualisedPartFactoryResource && visualisedSpec) 
 	
-		// visualise it
-		console.log('Received part to visualise');
-		
-		part.visualiseWithGL();
-		
-		var mesh = part.visualisations[0].mesh;
-		mesh.geometry.computeBoundingBox();
-		
-		mesh.castShadow = true;
-		mesh.receiveShadow = true;
-		
-		emptySceneOfObject3Ds();
-		
-		var obj = new THREE.Object3D();
-		obj.add(mesh);
-		obj.id = 'partData';
-		scene.add(obj);
-		
-		// enable button
-		//$('#partFactoryExampleButton').removeClass('thinking');
-		
-		updatePartFactoryBin(pf);
-	});
+		var res = project.getResourceByPath(visualisedPartFactoryResource);
+		console.log('resource: ',res);
+		if (res) {
+			var pf = res.data.getPartFactoryByName(visualisedPartFactory);
+	
+			console.log('pf: ',pf);
+	
+			if (pf) visualisePartWithSpec(pf, visualisedSpec);
+		}
 }
 
 function loadAndShowGitRepoList() {
