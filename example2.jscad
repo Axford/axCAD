@@ -63,12 +63,12 @@ Screw.make = function(spec) {
 	var part = new Part(spec);
 	
 	// do some CSG stuff to make a screw based on the spec
-	var capH = spec.r.v * 1.5;
-	var capR = spec.r.v * 1.6;
+	var capH = spec.r.value * 1.5;
+	var capR = spec.r.value * 1.6;
 	var cap = CSG.cylinder({start:[0,0,-capH], end:[0,0,0], radius:capR});
-	var cyl = CSG.cylinder({start:[0,0,0], end:[0,0,spec.l.value], radius:spec.r.value});
+	var thread = CSG.cylinder({start:[0,0,0], end:[0,0,spec.l.value], radius:spec.r.value});
   
-  	var csg = cap.union(cyl);
+  	var csg = cap.union(thread);
 
 	// define connectors
 	part.connectors.add({name:'Base',pos:[0,0,0],dir:[0,0,-1]});
