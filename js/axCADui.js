@@ -13,8 +13,27 @@ var visualisedPartFactoryResource;
 var visualisedSpec;
 
 var projectGitAccordion;
+
+function notify(msg, type) {
+	console.log('Notification: '+type + ' = '+msg);
+	var timeout = 1000 + msg.length * (1000/40);
+	if (type == 'error' || type == 'warning')
+		timeout = false;
+	var n = noty({
+		'text': msg,
+		'type': type,
+		'timeout': timeout,
+		animation: {
+			open: {height: 'toggle'},
+			close: {height: 'toggle'},
+			easing: 'swing',
+			speed: 200
+		}
+	});
+}
 	
 function initUI() {
+
 	// panel layouts
 	bodyLayout = $('body').layout();
 
@@ -63,6 +82,30 @@ function initUI() {
 	// event handlers
 	$( window ).resize(function() {
 		resizeUI();
+	});
+	
+	$(window).bind('keydown', function(event) {
+		if (event.ctrlKey || event.metaKey) {
+			switch (String.fromCharCode(event.which).toLowerCase()) {
+			case 's':
+				event.preventDefault();
+				//ctrl-s
+				sourceEditorSaveFile(false);
+				break;
+			case 'f':
+				event.preventDefault();
+				//ctrl-f
+				break;
+			case 'g':
+				event.preventDefault();
+				// ctrl-g
+				break;
+			}
+			
+			if (event.keyCode == 27) {
+				$.noty.closeAll();
+			}
+		}
 	});
 }
 
@@ -240,7 +283,7 @@ function updateResourceTree() {
 					node.domElement.children('div').addClass('error');
 					node.domElement.children('div').removeClass('compiled');
 					
-					console.log('Error in '+node.name+': '+node.compileError.msg);
+					notify('Error in '+node.name+': '+node.compileError.msg + ' on line '+node.compileError.lineNo, 'error');
 				}
 			}
 			node.data.onchanged = function(node) {
@@ -365,18 +408,36 @@ function editFile(node) {
 		// setup event handles
 		$('#sourceCompileButton').off();
 		$('#sourceCompileButton').click(function(e) {
-			resource.data.updateData(editor.getValue());
+			sourceEditorSaveFile(false);
 		});
 		
 		$('#sourceCommitButton').off();
 		$('#sourceCommitButton').click(function(e) {
-			// commit to github
+			sourceEditorSaveFile(true);
 		});
 		
 	} else {
 		// not yet loaded...
 	}
 }
+
+function sourceEditorSaveFile(commit) {
+	if (editor.resourceID) {
+		var resource = project.resources.find(editor.resourceID);
+		resource.data.updateData(editor.getValue());
+		
+		notify(resource.data.name + ' saved', 'success');
+		
+		if (commit)
+			resource.data.commitToGithub(function(err) {
+				if (err) 
+					notify('Unable to commit '+resource.data.name+' - '+err,'error')
+				else
+					notify('Committed '+resource.data.name,'success');
+			});
+	}
+}
+
 
 function openProject(path) {	
 	if (path != null) {
@@ -594,9 +655,9 @@ function visualisePartWithSpec(pf,spec, cb) {
 	if (pf && spec) {
 		console.log(pf);
 		
-		visualisedPartFactoryResource = undefined;
-		visualisedPartFactory = undefined;
-		visualisedSpec = undefined;
+		//visualisedPartFactoryResource = undefined;
+		//visualisedPartFactory = undefined;
+		//visualisedSpec = undefined;
 		
 		// go make a suitable part
 		pf.make(spec, function(part) {

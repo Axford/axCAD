@@ -578,6 +578,12 @@ Resource.prototype.updateData = function(data) {
 	// TODO
 }
 
+Resource.prototype.commitToGithub = function(cb) {
+	fileSystemBroker.writeGithubFile(this.source, this.data, function(err) {
+		if (cb) cb(err);
+	});
+}
+
 
 resourceCompileErrorHandler = function(msg,url,lineNo,source) {
 	// assume a project object has been defined!
@@ -720,7 +726,7 @@ Resource.prototype.receivePart = function(p) {
 }
 
 Resource.prototype.onWorkerMessage = function(e) {
-	console.log('Received from worker: '+e.data.cmd + ', '+e.data.data);
+	//console.log('Received from worker: '+e.data.cmd + ', '+e.data.data);
 	
 	if (e.data && e.data.cmd) {
 		switch(e.data.cmd) {
@@ -735,7 +741,8 @@ Resource.prototype.onWorkerMessage = function(e) {
 				
 			case 'compiled':
 				// fully compiled!
-				if (this.oncompiled) this.oncompiled(this);
+				console.log('fully compiled');
+				if (this.resource.oncompiled) this.resource.oncompiled(this.resource);
 				break;
 				
 			case 'error':
@@ -1047,6 +1054,11 @@ FileSystemBroker.prototype.getGithubRepoTree = function(branch, cb) {
 
 FileSystemBroker.prototype.readGithubFile = function(path, cb) {
 	this.gitRepo.read(this.gitBranch, path, cb);
+}
+
+FileSystemBroker.prototype.writeGithubFile = function(path, data, cb) {
+	var commitMsg = 'Commit from axCAD '+Date.now();
+	this.gitRepo.write(this.gitBranch, path, data, commitMsg, cb);
 }
 
 // global broker
