@@ -14,31 +14,14 @@
 			token: "dca8a5ceabe3b3a67a355375c4d3fae1cdac25ec"
 		});
 		
-		console.log("4");
-	
-		var user = github.getUser();
-	
-		console.log(user);	
 		
-		user.repos(function(err, repos) {
-			console.log("user.repos:", repos);
-		});
-	
-		console.log("1");
-	
 		var repo = github.getRepo("Axford", "axCut");
 	
-		console.log("2");
-	
-		repo.show(function(err, repo) {
-			console.log("repos.show: ",repo);		
-		});
-	
-		console.log("3");
 		
-		repo.getTree('master', function(err, tree) {
+		repo.getTree('master?recursive=true', function(err, tree) {
 			console.log(tree);
 		});
+		
 	
 	});
 	

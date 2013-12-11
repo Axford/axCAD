@@ -12,26 +12,81 @@
 	<script type="text/javascript">
 	
 	$(function() {
-		//console.log(VFS);
 		
-		// list of filesystems
-		console.log(VFS.Mount.getRegisteredFileSystems());
 		
 		// create a dirEntry to be the root of our filesystem
-		var root = Object.create(VFS.DirectoryEntry);
-		root.name = '/';
+		var root = Object.construct(VFS.DirectoryEntry);
 		
-		// mount something
+		// mount
 		VFS.Mount.mount(
 			root,
 			'github',
-			{}, 
+			{
+				personalToken: 'dca8a5ceabe3b3a67a355375c4d3fae1cdac25ec',
+				user:'Axford',
+				repo: 'axCAD',
+				branch: 'master',
+				rootPath: '/css',
+				defaultCommitMessage: 'VFS commit'
+			}, 
 			function(err) {
+				// read, recursively
+				root.read(true, function() {
+					
+				});
+			
 				console.log('Mount complete',err);
+				
+				// get a directory node
+		
+		
+				// mount something else
+				
+				
+				
+				// list what we've got
+				console.log(root);
+				ls();
 		});
 		
-		console.log(root);
-	
+		
+		
+		
+		
+		
+		
+		function lsDir(node,de) {
+			var ul = $('<ul/>');
+			node.append(ul);
+			
+		
+			// list directories first
+			for (var i =0;i<de.directories.length;i++) {
+				var li = $('<li/>');
+				var c = de.directories[i];
+				li.html(c.name);
+				ul.append(li);
+				
+				lsDir(li, c);
+			}
+			
+			
+			// then files
+			for (var i =0;i<de.files.length;i++) {
+				var li = $('<li/>');
+				var c = de.files[i];
+				li.html(c.name);
+				ul.append(li);
+			}
+		}
+		
+		function ls() {
+			var node = $('#log');
+			node.html('');	
+			
+			lsDir(node,root);
+		}
+		
 	});
 	
 	</script>

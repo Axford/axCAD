@@ -13,30 +13,37 @@ FileEntry
 DirectoryEntry - in memory representation of a directoryEntry, backs off to a filesystem to do useful stuff
 
 FileSystem - interface
-FileSystemGithub
-FileSystemMemory
-FileSystemDropbox
 
 FileReader
 
 FileWriter
 
-DirectoryReader
-
-Mount - binds a filesystem to a directoryEntry
+Mount - manages mounting, where filesystems register
 
 
 */
+
 var VFS = VFS || {};
 
 
-// util
-if (typeof Object.create !== 'function') {
-    Object.create = function (o) {
+// utils
+if (typeof Object.construct !== 'function') {
+    Object.construct = function (o,args) {
         function F() {}
         F.prototype = o;
-        return new F();
+        f = new F();
+        
+        if (typeof f.constructor == 'function') {
+        	f.constructor(args);
+        }
+        
+        return f;
     };
+}
+if (typeof String.prototype.startsWith != 'function') {
+  String.prototype.startsWith = function (str){
+    return this.slice(0, str.length) == str;
+  };
 }
 
 
@@ -52,12 +59,17 @@ VFS.UnknownFileSystemError = {};
 	// var zzzz
 	
 	// public
-	entry.isFile = false;
-	entry.isDirectory = false;
-	entry.isMountPoint = false;
-	entry.name = '';
-	entry.fileSystem = null;
-	entry.parent = null;
+	
+	entry.constructor = function(args) {
+		this.isFile = false;
+		this.isDirectory = false;
+		this.isMountPoint = false;
+		this.name = '';
+		this.fileSystem = null;
+		this.parent = null;
+		this.localPath = '';  // absolute path in VFS
+		this.remotePath = '';  // absolute path in actual filesystem
+	}
 	
 	
 })(VFS.Entry = VFS.Entry || {});
@@ -65,7 +77,12 @@ VFS.UnknownFileSystemError = {};
 
 // VFS.FileEntry
 (function(fileEntry) {
-	fileEntry.isFile = true;
+	
+	fileEntry.constructor = function(args) {
+		VFS.Entry.constructor.call(this, args);
+		this.isFile = true;
+		
+	}
 	
 		
 })(VFS.FileEntry = VFS.FileEntry || Object.create(VFS.Entry));
@@ -73,8 +90,37 @@ VFS.UnknownFileSystemError = {};
 
 // VFS.DirectoryEntry
 (function(dirEntry) {
-	dirEntry.isDirectory = true;	
+
+	dirEntry.constructor = function(args) {
+		VFS.Entry.constructor.call(this,args);
 	
+		this.isDirectory = true;	
+	
+		this.directories = [];
+		this.files = [];
+	
+		// default name reflects root
+		this.name = '/';
+		this.localPath = '/';
+	
+	}
+	
+	// read/load directories and files from fileSystem
+	dirEntry.read = function(recursive,callback) {
+		var me = this;
+		var cb = callback;
+		
+		if (this.fileSystem) {
+			this.fileSystem.ls(this, true, function(err) {
+				
+				
+				callback(err);
+			});
+			
+			
+			
+		}
+	}
 		
 })(VFS.DirectoryEntry = VFS.DirectoryEntry || Object.create(VFS.Entry));
 
@@ -87,6 +133,10 @@ VFS.UnknownFileSystemError = {};
 	
 	// public
 	fs.name = '';
+	
+	fs.constructor = function(args) {
+		this.isMounted = false;
+	}
 	
 	// fs.mount
 	
