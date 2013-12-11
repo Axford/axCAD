@@ -1,0 +1,49 @@
+<html>
+<head>
+
+	<script src="https://rawgithub.com/jashkenas/underscore/master/underscore-min.js" type="text/javascript"></script>
+	<script src="http://codeorigin.jquery.com/jquery-2.0.3.min.js" type="text/javascript"></script>
+	<script src="js/github.js" type="text/javascript"></script>
+	
+	
+	<script src="js/filesystem.js" type="text/javascript"></script>
+	<script src="js/filesystem.github.js" type="text/javascript"></script>
+	
+	<script type="text/javascript">
+	
+	$(function() {
+		//console.log(VFS);
+		
+		// list of filesystems
+		console.log(VFS.Mount.getRegisteredFileSystems());
+		
+		// create a dirEntry to be the root of our filesystem
+		var root = Object.create(VFS.DirectoryEntry);
+		root.name = '/';
+		
+		// mount something
+		VFS.Mount.mount(
+			root,
+			'github',
+			{}, 
+			function(err) {
+				console.log('Mount complete',err);
+		});
+		
+		console.log(root);
+	
+	});
+	
+	</script>
+	
+</head>
+
+
+<body>
+
+
+<div id="log"/>
+
+
+</body>
+</html>
