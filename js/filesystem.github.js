@@ -30,6 +30,7 @@
 	
 	fs.mount = function(dirEntry,args,callback) {
 		dirEntry.isMountPoint = true;
+		dirEntry.clear();  // clear any existing contents - can't have them as a mount point!
 		dirEntry.remotePath = args.rootPath;
 		
 		// instance a new filesystem and bind to dirEntry

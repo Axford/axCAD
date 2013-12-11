@@ -38,14 +38,33 @@
 				console.log('Mount complete',err);
 				
 				// get a directory node
-		
+				var de = root.getDirectory('/ui-lightness/images');
+				
 		
 				// mount something else
-				
+				VFS.Mount.mount(
+					de,
+					'github',
+					{
+						personalToken: 'dca8a5ceabe3b3a67a355375c4d3fae1cdac25ec',
+						user:'Axford',
+						repo: 'axCAD',
+						branch: 'master',
+						rootPath: '/js/noty',
+						defaultCommitMessage: 'VFS commit'
+					}, 
+					function(err) {
+						// read, recursively
+						de.read(true, function() {});
+						
+						// update what we've got
+						ls();
+					}
+				);
 				
 				
 				// list what we've got
-				console.log(root);
+				//console.log(root);
 				ls();
 		});
 		
@@ -64,7 +83,7 @@
 			for (var i =0;i<de.directories.length;i++) {
 				var li = $('<li/>');
 				var c = de.directories[i];
-				li.html(c.name);
+				li.html(c.name + ', '+ (c.isDirectory?'dir':'')+', '+(c.isMountPoint?'mountPoint':''));
 				ul.append(li);
 				
 				lsDir(li, c);

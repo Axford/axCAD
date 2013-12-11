@@ -40,9 +40,18 @@ if (typeof Object.construct !== 'function') {
         return f;
     };
 }
+
 if (typeof String.prototype.startsWith != 'function') {
   String.prototype.startsWith = function (str){
     return this.slice(0, str.length) == str;
+  };
+}
+
+if (typeof String.prototype.splitFirst != 'function') {
+  String.prototype.splitFirst = function (sep){
+  	var i = this.indexOf(sep);
+  	if (i<0) return [this.substr(0), '']
+  	else return [this.substr(0,i), this.substr(i+1)];
   };
 }
 
@@ -99,10 +108,16 @@ VFS.UnknownFileSystemError = {};
 		this.directories = [];
 		this.files = [];
 	
-		// default name reflects root
+		// default properties are for root
 		this.name = '/';
 		this.localPath = '/';
+		this.parent = this; 
 	
+	}
+	
+	dirEntry.clear = function() {
+		this.directories.length = 0;
+		this.files.length = 0;
 	}
 	
 	// read/load directories and files from fileSystem
@@ -119,6 +134,62 @@ VFS.UnknownFileSystemError = {};
 			
 			
 			
+		}
+	}
+	
+	dirEntry.getRoot = function() {
+		if (this.parent != this) {
+			return this.parent.getRoot();
+		} else {
+			return this;
+		}
+	}
+	
+	dirEntry.getFile = function(path, options) {
+		if (path.length < 1) return null;
+		
+		
+	}
+	
+	dirEntry.getDirectory = function(path, options) {
+		// blank path refers to current dirNode
+		if (path.length < 1) return this;
+		
+		var startFrom = this;
+		if (path.startsWith('/')) {
+			// reset start to root
+			startFrom = this.getRoot();
+			path = path.substr(1);
+		} 
+		
+		// get first dir of path
+		parts = path.splitFirst('/');
+		while (parts[0] == '.') {
+			parts = parts[1].splitFirst('/');
+		}
+		
+		
+		// see if we're at the end of the path
+		if (parts[1] == '') {
+			if (parts[0] == this.name) 
+				return this;
+		}
+		
+		// look for a sub dir called part[0]
+		var subdir = null;
+		for (var i = 0; i< this.directories.length; i++) {
+			var d = this.directories[i];
+			if (d.name == parts[0]) {
+				subdir = d;
+				break;
+			}
+		}
+		
+		if (subdir) {
+			return subdir.getDirectory(parts[1], options);
+		} else {
+			// clearly couldn't find a match
+			return null;
 		}
 	}
 		
